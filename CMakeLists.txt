@@ -100,6 +100,12 @@ add_executable(itch_reader src/itch_reader_main.cpp)
 target_link_libraries(itch_reader PRIVATE itch_parser)
 
 # ──────────────────────────────────────────────────────────────────────
+# Limit Order Book Engine (Phase 2)
+# ──────────────────────────────────────────────────────────────────────
+add_executable(itch_lob src/lob_main.cpp)
+target_link_libraries(itch_lob PRIVATE itch_parser)
+
+# ──────────────────────────────────────────────────────────────────────
 # Unit Tests
 # ──────────────────────────────────────────────────────────────────────
 if(BUILD_TESTS)

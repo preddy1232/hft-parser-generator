@@ -85,7 +85,7 @@ struct CountingHandler {
         for (char type : ALL_MESSAGE_TYPES) {
             uint64_t c = counts[static_cast<uint8_t>(type)];
             if (c > 0) {
-                std::printf("  [%c] %-28s %'" PRIu64 "\n",
+                std::printf("  [%c] %-28s %" PRIu64 "\n",
                     type, message_name(type), c);
             }
         }
@@ -95,7 +95,7 @@ struct CountingHandler {
 // ─────────────────────────────────────────────────────────────────────────────
 // File type detection
 // ─────────────────────────────────────────────────────────────────────────────
-namespace detail {
+namespace utils {
 
 [[nodiscard]] inline bool has_extension(const char* path, const char* ext) noexcept {
     const char* dot = nullptr;
@@ -116,7 +116,7 @@ namespace detail {
     return dot[std::strlen(ext)] == '\0';
 }
 
-} // namespace detail
+} // namespace utils
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Summary printing
@@ -125,10 +125,10 @@ static void print_summary(const FileReaderStats& stats) noexcept {
     std::puts("\n  ══════════════════════════════════════");
     std::puts("  Summary");
     std::puts("  ──────────────────────────────────────");
-    std::printf("  Messages parsed:    %'" PRIu64 "\n", stats.messages_parsed);
-    std::printf("  Unknown messages:   %'" PRIu64 "\n", stats.unknown_messages);
-    std::printf("  Bytes processed:    %'" PRIu64 "\n", stats.bytes_processed);
-    std::printf("  File size:          %'" PRIu64 "\n", stats.total_file_bytes);
+    std::printf("  Messages parsed:    %" PRIu64 "\n", stats.messages_parsed);
+    std::printf("  Unknown messages:   %" PRIu64 "\n", stats.unknown_messages);
+    std::printf("  Bytes processed:    %" PRIu64 "\n", stats.bytes_processed);
+    std::printf("  File size:          %" PRIu64 "\n", stats.total_file_bytes);
     std::printf("  Elapsed time:       %.6f s\n", stats.elapsed_seconds);
     std::printf("  Throughput:         %.2f M msgs/sec\n",
         stats.messages_per_second() / 1e6);
@@ -142,9 +142,9 @@ static void print_pcap_info(const PcapInfo& info) noexcept {
     std::printf("    Version:      %u.%u\n", info.version_major, info.version_minor);
     std::printf("    Snap length:  %u\n", info.snaplen);
     std::printf("    Link type:    %u", info.link_type);
-    if (info.link_type == detail::LINKTYPE_ETHERNET) std::puts(" (Ethernet)");
-    else if (info.link_type == detail::LINKTYPE_RAW) std::puts(" (Raw IP)");
-    else if (info.link_type == detail::LINKTYPE_LINUX_SLL) std::puts(" (Linux SLL)");
+    if (info.link_type == itch50::detail::LINKTYPE_ETHERNET) std::puts(" (Ethernet)");
+    else if (info.link_type == itch50::detail::LINKTYPE_RAW) std::puts(" (Raw IP)");
+    else if (info.link_type == itch50::detail::LINKTYPE_LINUX_SLL) std::puts(" (Linux SLL)");
     else std::puts("");
     std::printf("    Byte swap:    %s\n", info.byte_swap ? "yes" : "no");
     std::printf("    Nanosecond:   %s\n", info.nanosecond ? "yes" : "no");
@@ -152,10 +152,10 @@ static void print_pcap_info(const PcapInfo& info) noexcept {
 
 static void print_pcap_summary(const PcapReaderStats& stats) noexcept {
     std::puts("\n  PCAP Statistics:");
-    std::printf("    Packets total:    %'" PRIu64 "\n", stats.packets_total);
-    std::printf("    UDP packets:      %'" PRIu64 "\n", stats.packets_udp);
-    std::printf("    Skipped packets:  %'" PRIu64 "\n", stats.packets_skipped);
-    std::printf("    MoldUDP64 msgs:   %'" PRIu64 "\n", stats.moldudp64_sessions);
+    std::printf("    Packets total:    %" PRIu64 "\n", stats.packets_total);
+    std::printf("    UDP packets:      %" PRIu64 "\n", stats.packets_udp);
+    std::printf("    Skipped packets:  %" PRIu64 "\n", stats.packets_skipped);
+    std::printf("    MoldUDP64 msgs:   %" PRIu64 "\n", stats.moldudp64_sessions);
     print_summary(stats.base);
 }
 
@@ -216,8 +216,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Detect file type
-    bool is_pcap = detail::has_extension(filename, ".pcap") ||
-                   detail::has_extension(filename, ".pcapng");
+    bool is_pcap = utils::has_extension(filename, ".pcap") ||
+                   utils::has_extension(filename, ".pcapng");
 
     CountingHandler handler;
     handler.verbosity = verbosity;
