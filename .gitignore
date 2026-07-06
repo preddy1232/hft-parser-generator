@@ -1,0 +1,31 @@
+# =============================================================================
+#  .gitignore — HFT Parser Generator
+# =============================================================================
+
+# Build artifacts
+build/
+cmake-build-*/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cache/
+compile_commands.json
+
+# Generated files (re-generate from schema)
+generated/generated_itch_parser.hpp
+
+# OS
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/

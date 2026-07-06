@@ -1,0 +1,21 @@
+# ==============================================================================
+# docker-compose.yml — Local Development Environment
+# ==============================================================================
+# Usage:
+#   docker-compose run --rm hft-env
+#
+# Inside the container:
+#   cmake -B build -DCMAKE_BUILD_TYPE=Release
+#   cmake --build build -j
+#   ./build/itch_tests
+#   ./build/itch_bench
+# ==============================================================================
+services:
+  hft-env:
+    build: .
+    volumes:
+      - .:/app
+    # Run the container securely without root escalation, 
+    # but with enough privileges for perf/benchmarking if needed.
+    security_opt:
+      - seccomp:unconfined

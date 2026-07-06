@@ -1,0 +1,14 @@
+# HFT-grade style: compact, minimal vertical whitespace
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 100
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+BreakBeforeBraces: Attach
+PointerAlignment: Left
+SpaceAfterTemplateKeyword: false
+Standard: c++20
+SortIncludes: true
+IncludeBlocks: Regroup

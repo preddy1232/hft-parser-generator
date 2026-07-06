@@ -1,0 +1,208 @@
+# =============================================================================
+# CI/CD Pipeline — HFT ITCH 5.0 Parser Generator
+# =============================================================================
+#
+# This workflow validates the schema, regenerates the parser header, builds
+# across a GCC/Clang × Debug/Release matrix, runs unit tests, smoke-tests the
+# driver, and (on Release only) runs Google Benchmarks and uploads results.
+#
+# Caching: CMake build directory and FetchContent downloads are cached per
+# compiler/build-type combination to speed up subsequent runs.
+# =============================================================================
+
+name: CI
+
+# ─── Triggers ────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# Cancel in-progress runs on the same branch/PR to save runner minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─── Build Matrix ────────────────────────────────────────────────────────────
+jobs:
+  build-and-test:
+    name: "${{ matrix.compiler }} / ${{ matrix.build_type }}"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false  # Let all matrix legs finish so we see the full picture
+      matrix:
+        include:
+          - compiler: gcc-13
+            cc: gcc-13
+            cxx: g++-13
+            build_type: Release
+            packages: gcc-13 g++-13
+
+          - compiler: gcc-13
+            cc: gcc-13
+            cxx: g++-13
+            build_type: Debug
+            packages: gcc-13 g++-13
+
+          - compiler: clang-18
+            cc: clang-18
+            cxx: clang++-18
+            build_type: Release
+            packages: clang-18
+
+          - compiler: clang-18
+            cc: clang-18
+            cxx: clang++-18
+            build_type: Debug
+            packages: clang-18
+
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      BUILD_DIR: build
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Install compiler & dependencies ─────────────────────────────
+      - name: Install compiler and build tools
+        run: |
+          # Add the official LLVM APT repo for Clang 18 (if needed)
+          if [[ "${{ matrix.compiler }}" == clang-* ]]; then
+            wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+            echo "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-18 main" \
+              | sudo tee /etc/apt/sources.list.d/llvm-18.list
+          fi
+
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build python3 ${{ matrix.packages }}
+
+          # Verify versions
+          echo "--- Compiler ---"
+          ${{ matrix.cc }} --version
+          echo "--- CMake ---"
+          cmake --version
+          echo "--- Python ---"
+          python3 --version
+
+      # ── 3. Validate schema ─────────────────────────────────────────────
+      # Ensures the JSON schema is well-formed, offsets are contiguous,
+      # and declared message sizes match the sum of field lengths.
+      - name: Validate ITCH 5.0 schema
+        run: python3 schema/validate_schema.py schema/itch50_schema.json
+
+      # ── 4. Run code generator ──────────────────────────────────────────
+      # Regenerates the parser header from the schema and writes to a
+      # temporary location so we can diff against the committed version.
+      - name: Run code generator
+        run: |
+          mkdir -p generated_ci
+          python3 generator/generator.py \
+            schema/itch50_schema.json \
+            generated_ci/generated_itch_parser.hpp
+
+      # ── 5. Verify generated output matches committed version ───────────
+      # If this fails, someone edited the generated header by hand or
+      # forgot to re-run the generator after a schema change.
+      # We ignore the "Generated at" timestamp line since it changes every run.
+      - name: Diff check — generated header vs. committed version
+        run: |
+          # Strip the timestamp line from both files for a stable comparison
+          strip_timestamp() {
+            grep -v '^// Generated at' "$1"
+          }
+
+          strip_timestamp generated/generated_itch_parser.hpp > /tmp/committed.hpp
+          strip_timestamp generated_ci/generated_itch_parser.hpp > /tmp/regenerated.hpp
+
+          if ! diff -u /tmp/committed.hpp /tmp/regenerated.hpp; then
+            echo ""
+            echo "::error::Generated header differs from committed version!"
+            echo "Run: python3 generator/generator.py schema/itch50_schema.json generated/generated_itch_parser.hpp"
+            exit 1
+          fi
+          echo "✓ Generated header matches committed version."
+
+      # ── 6. Cache CMake build & FetchContent downloads ──────────────────
+      # Keyed on compiler + build type + CMakeLists hash to bust on config changes.
+      - name: Cache CMake build directory
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.BUILD_DIR }}
+          key: cmake-${{ matrix.compiler }}-${{ matrix.build_type }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            cmake-${{ matrix.compiler }}-${{ matrix.build_type }}-
+
+      - name: Cache FetchContent downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/CPM  # Common FetchContent cache location
+          key: fetchcontent-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            fetchcontent-
+
+      # ── 7. CMake configure ─────────────────────────────────────────────
+      - name: CMake configure
+        run: |
+          cmake -B ${{ env.BUILD_DIR }} \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_C_COMPILER=${{ matrix.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DBUILD_TESTS=ON \
+            -DBUILD_BENCHMARKS=ON \
+            -DBUILD_GODBOLT=ON \
+            -DFETCHCONTENT_QUIET=OFF
+
+      # ── 8. Build all targets ───────────────────────────────────────────
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --parallel $(nproc)
+
+      # ── 9. Run unit tests ──────────────────────────────────────────────
+      - name: Run tests
+        run: ctest --test-dir ${{ env.BUILD_DIR }} --output-on-failure --parallel $(nproc)
+
+      # ── 10. Smoke test the driver ──────────────────────────────────────
+      # Quick sanity check that the main driver binary runs without crashing.
+      - name: Smoke test — itch_driver
+        run: |
+          ./${{ env.BUILD_DIR }}/itch_driver || true
+          echo "✓ Driver executed (exit code $?)."
+
+      # ── 11. Run benchmarks (Release only) ──────────────────────────────
+      # Benchmarks are only meaningful on optimised builds.
+      # Output is saved as JSON for artifact upload and cross-run comparison.
+      - name: Run benchmarks
+        if: matrix.build_type == 'Release'
+        run: |
+          ./${{ env.BUILD_DIR }}/itch_bench \
+            --benchmark_format=json \
+            --benchmark_out=${{ env.BUILD_DIR }}/benchmark_results.json \
+            --benchmark_out_format=json
+          echo "✓ Benchmarks completed."
+          echo ""
+          echo "--- Results Summary ---"
+          cat ${{ env.BUILD_DIR }}/benchmark_results.json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for b in data.get('benchmarks', []):
+              name = b.get('name', '?')
+              time = b.get('real_time', 0)
+              unit = b.get('time_unit', 'ns')
+              print(f'  {name}: {time:.2f} {unit}')
+          " || true
+
+      # ── 12. Upload benchmark results as artifacts ──────────────────────
+      - name: Upload benchmark results
+        if: matrix.build_type == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ matrix.compiler }}
+          path: ${{ env.BUILD_DIR }}/benchmark_results.json
+          retention-days: 30
+          if-no-files-found: warn

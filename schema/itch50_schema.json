@@ -1,0 +1,480 @@
+{
+  "protocol": "NASDAQ TotalView-ITCH 5.0",
+  "version": "5.0",
+  "byte_order": "big_endian",
+  "description": "Binary protocol for disseminating full order-depth market data. All multi-byte integers are big-endian (network byte order). Timestamps are nanoseconds since midnight ET. Alpha fields are space-padded ASCII.",
+
+  "data_types": {
+    "alpha":     { "description": "Single ASCII character",                        "cpp_type": "char",     "size": 1, "endian_swap": false },
+    "alpha_2":   { "description": "Fixed 2-byte ASCII string (space-padded right)", "cpp_type": "char[2]",  "size": 2, "endian_swap": false },
+    "alpha_4":   { "description": "Fixed 4-byte ASCII string (space-padded right)", "cpp_type": "char[4]",  "size": 4, "endian_swap": false },
+    "alpha_8":   { "description": "Fixed 8-byte ASCII string (space-padded right)", "cpp_type": "char[8]",  "size": 8, "endian_swap": false },
+    "integer_2": { "description": "Unsigned 16-bit big-endian integer",             "cpp_type": "uint16_t", "size": 2, "endian_swap": true  },
+    "integer_4": { "description": "Unsigned 32-bit big-endian integer",             "cpp_type": "uint32_t", "size": 4, "endian_swap": true  },
+    "integer_6": { "description": "Unsigned 48-bit big-endian integer (timestamp)", "cpp_type": "uint64_t", "size": 6, "endian_swap": true  },
+    "integer_8": { "description": "Unsigned 64-bit big-endian integer",             "cpp_type": "uint64_t", "size": 8, "endian_swap": true  },
+    "price_4":   { "description": "32-bit big-endian price (4 implied decimals)",   "cpp_type": "uint32_t", "size": 4, "endian_swap": true, "decimals": 4 },
+    "price_8":   { "description": "64-bit big-endian price (8 implied decimals)",   "cpp_type": "uint64_t", "size": 8, "endian_swap": true, "decimals": 8 }
+  },
+
+  "messages": [
+    {
+      "type": "S",
+      "name": "SystemEvent",
+      "size": 12,
+      "category": "system",
+      "description": "Signals a market or data feed handler event (start/end of day, halts).",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "S" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2, "notes": "Always 0 for system events" },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6, "notes": "Nanoseconds since midnight" },
+        { "name": "event_code",      "type": "alpha",     "offset": 11, "length": 1, "values": {
+          "O": "Start of Messages",
+          "S": "Start of System Hours",
+          "Q": "Start of Market Hours",
+          "M": "End of Market Hours",
+          "E": "End of System Hours",
+          "C": "End of Messages"
+        }}
+      ]
+    },
+
+    {
+      "type": "R",
+      "name": "StockDirectory",
+      "size": 39,
+      "category": "stock_related",
+      "description": "Disseminated at start of day for all active securities. Provides symbol, market tier, and financial status.",
+      "fields": [
+        { "name": "message_type",                  "type": "alpha",     "offset": 0,  "length": 1, "value": "R" },
+        { "name": "stock_locate",                  "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",               "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",                     "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "stock",                         "type": "alpha_8",   "offset": 11, "length": 8 },
+        { "name": "market_category",               "type": "alpha",     "offset": 19, "length": 1, "values": {
+          "Q": "Nasdaq Global Select Market",
+          "G": "Nasdaq Global Market",
+          "S": "Nasdaq Capital Market",
+          "N": "NYSE",
+          "A": "NYSE MKT",
+          "P": "NYSE Arca",
+          "Z": "BATS Z Exchange",
+          "V": "Investors Exchange",
+          " ": "Not available"
+        }},
+        { "name": "financial_status_indicator",    "type": "alpha",     "offset": 20, "length": 1, "values": {
+          "D": "Deficient",
+          "E": "Delinquent",
+          "Q": "Bankrupt",
+          "S": "Suspended",
+          "G": "Deficient and Bankrupt",
+          "H": "Deficient and Delinquent",
+          "J": "Delinquent and Bankrupt",
+          "K": "Deficient, Delinquent, and Bankrupt",
+          "C": "Creations/Redemptions Suspended (ETPs)",
+          "N": "Normal",
+          " ": "Not available"
+        }},
+        { "name": "round_lot_size",                "type": "integer_4", "offset": 21, "length": 4 },
+        { "name": "round_lots_only",               "type": "alpha",     "offset": 25, "length": 1 },
+        { "name": "issue_classification",          "type": "alpha",     "offset": 26, "length": 1 },
+        { "name": "issue_sub_type",                "type": "alpha_2",   "offset": 27, "length": 2 },
+        { "name": "authenticity",                  "type": "alpha",     "offset": 29, "length": 1, "values": { "P": "Live/Production", "T": "Test" }},
+        { "name": "short_sale_threshold_indicator", "type": "alpha",    "offset": 30, "length": 1, "values": { "Y": "Restricted", "N": "Not restricted", " ": "Not available" }},
+        { "name": "ipo_flag",                      "type": "alpha",     "offset": 31, "length": 1, "values": { "Y": "IPO release set", "N": "Not applicable", " ": "Not available" }},
+        { "name": "luld_reference_price_tier",     "type": "alpha",     "offset": 32, "length": 1, "values": { "1": "Tier 1 (NMS)", "2": "Tier 2 (NMS)", " ": "Not available" }},
+        { "name": "etp_flag",                      "type": "alpha",     "offset": 33, "length": 1, "values": { "Y": "ETP", "N": "Not ETP", " ": "Not available" }},
+        { "name": "etp_leverage_factor",           "type": "integer_4", "offset": 34, "length": 4, "notes": "Tracking ratio to underlying index (0 if not ETP)" },
+        { "name": "inverse_indicator",             "type": "alpha",     "offset": 38, "length": 1, "values": { "Y": "Inverse ETP", "N": "Not inverse" }}
+      ]
+    },
+
+    {
+      "type": "H",
+      "name": "StockTradingAction",
+      "size": 25,
+      "category": "stock_related",
+      "description": "Indicates trading halt, quotation resumption, or a price indication for a specific security.",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "H" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "stock",           "type": "alpha_8",   "offset": 11, "length": 8 },
+        { "name": "trading_state",   "type": "alpha",     "offset": 19, "length": 1, "values": {
+          "H": "Halted across all markets",
+          "P": "Paused across all markets (LULD)",
+          "Q": "Quotation only period",
+          "T": "Trading on Nasdaq"
+        }},
+        { "name": "reserved",        "type": "alpha",     "offset": 20, "length": 1 },
+        { "name": "reason",          "type": "alpha_4",   "offset": 21, "length": 4, "notes": "Trading action reason code" }
+      ]
+    },
+
+    {
+      "type": "Y",
+      "name": "RegSHORestriction",
+      "size": 20,
+      "category": "stock_related",
+      "description": "Reg SHO Short Sale Price Test Restricted Indicator — indicates short sale circuit breaker status.",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "Y" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "stock",           "type": "alpha_8",   "offset": 11, "length": 8 },
+        { "name": "reg_sho_action",  "type": "alpha",     "offset": 19, "length": 1, "values": {
+          "0": "No price test in effect",
+          "1": "Reg SHO short sale price test restriction in effect",
+          "2": "Reg SHO short sale restriction testing — remains in effect"
+        }}
+      ]
+    },
+
+    {
+      "type": "L",
+      "name": "MarketParticipantPosition",
+      "size": 26,
+      "category": "stock_related",
+      "description": "Provides market-maker registration status for each Nasdaq-listed security.",
+      "fields": [
+        { "name": "message_type",             "type": "alpha",     "offset": 0,  "length": 1, "value": "L" },
+        { "name": "stock_locate",             "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",          "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",                "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "mpid",                     "type": "alpha_4",   "offset": 11, "length": 4, "notes": "Market Participant Identifier" },
+        { "name": "stock",                    "type": "alpha_8",   "offset": 15, "length": 8 },
+        { "name": "primary_market_maker",     "type": "alpha",     "offset": 23, "length": 1, "values": { "Y": "Primary", "N": "Non-primary" }},
+        { "name": "market_maker_mode",        "type": "alpha",     "offset": 24, "length": 1, "values": {
+          "N": "Normal",
+          "P": "Passive",
+          "S": "Syndicate",
+          "R": "Pre-syndicate",
+          "L": "Penalty"
+        }},
+        { "name": "market_participant_state",  "type": "alpha",     "offset": 25, "length": 1, "values": {
+          "A": "Active",
+          "E": "Excused/Withdrawn",
+          "W": "Withdrawn",
+          "S": "Suspended",
+          "D": "Deleted"
+        }}
+      ]
+    },
+
+    {
+      "type": "V",
+      "name": "MWCBDeclineLevel",
+      "size": 35,
+      "category": "system",
+      "description": "Market-Wide Circuit Breaker (MWCB) Decline Level — sets the three S&P 500 decline thresholds.",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "V" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "level_1",         "type": "price_8",   "offset": 11, "length": 8, "notes": "Level 1 decline value (7%)" },
+        { "name": "level_2",         "type": "price_8",   "offset": 19, "length": 8, "notes": "Level 2 decline value (13%)" },
+        { "name": "level_3",         "type": "price_8",   "offset": 27, "length": 8, "notes": "Level 3 decline value (20%)" }
+      ]
+    },
+
+    {
+      "type": "W",
+      "name": "MWCBStatus",
+      "size": 12,
+      "category": "system",
+      "description": "Market-Wide Circuit Breaker (MWCB) Status — indicates when a circuit breaker has been triggered.",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "W" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "breached_level",  "type": "alpha",     "offset": 11, "length": 1, "values": { "1": "Level 1", "2": "Level 2", "3": "Level 3" }}
+      ]
+    },
+
+    {
+      "type": "K",
+      "name": "IPOQuotingPeriodUpdate",
+      "size": 28,
+      "category": "stock_related",
+      "description": "Indicates the anticipated IPO quotation release time and price for securities coming to market.",
+      "fields": [
+        { "name": "message_type",                    "type": "alpha",     "offset": 0,  "length": 1, "value": "K" },
+        { "name": "stock_locate",                    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",                 "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",                       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "stock",                           "type": "alpha_8",   "offset": 11, "length": 8 },
+        { "name": "ipo_quotation_release_time",      "type": "integer_4", "offset": 19, "length": 4, "notes": "Seconds after midnight" },
+        { "name": "ipo_quotation_release_qualifier", "type": "alpha",     "offset": 23, "length": 1, "values": { "A": "Anticipated", "C": "Cancelled" }},
+        { "name": "ipo_price",                       "type": "price_4",   "offset": 24, "length": 4 }
+      ]
+    },
+
+    {
+      "type": "J",
+      "name": "LULDAuctionCollar",
+      "size": 35,
+      "category": "stock_related",
+      "description": "Limit Up-Limit Down Auction Collar — reference and collar prices for the reopening auction.",
+      "fields": [
+        { "name": "message_type",                   "type": "alpha",     "offset": 0,  "length": 1, "value": "J" },
+        { "name": "stock_locate",                   "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",                "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",                      "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "stock",                          "type": "alpha_8",   "offset": 11, "length": 8 },
+        { "name": "auction_collar_reference_price", "type": "price_4",   "offset": 19, "length": 4 },
+        { "name": "upper_auction_collar_price",     "type": "price_4",   "offset": 23, "length": 4 },
+        { "name": "lower_auction_collar_price",     "type": "price_4",   "offset": 27, "length": 4 },
+        { "name": "auction_collar_extension",       "type": "integer_4", "offset": 31, "length": 4, "notes": "Number of collar extensions" }
+      ]
+    },
+
+    {
+      "type": "h",
+      "name": "OperationalHalt",
+      "size": 21,
+      "category": "stock_related",
+      "description": "Operational halt or resumption of trading for a specific security on a specific market center.",
+      "fields": [
+        { "name": "message_type",            "type": "alpha",     "offset": 0,  "length": 1, "value": "h" },
+        { "name": "stock_locate",            "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",         "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",               "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "stock",                   "type": "alpha_8",   "offset": 11, "length": 8 },
+        { "name": "market_code",             "type": "alpha",     "offset": 19, "length": 1, "values": { "Q": "Nasdaq", "B": "BX", "X": "PSX" }},
+        { "name": "operational_halt_action", "type": "alpha",     "offset": 20, "length": 1, "values": { "H": "Halted", "T": "Trading resumed" }}
+      ]
+    },
+
+    {
+      "type": "A",
+      "name": "AddOrder",
+      "size": 36,
+      "category": "add_order",
+      "description": "Adds a new unattributed limit order to the book. No market participant identification.",
+      "fields": [
+        { "name": "message_type",           "type": "alpha",     "offset": 0,  "length": 1, "value": "A" },
+        { "name": "stock_locate",           "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",        "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",              "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "order_reference_number", "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "buy_sell_indicator",     "type": "alpha",     "offset": 19, "length": 1, "values": { "B": "Buy", "S": "Sell" }},
+        { "name": "shares",                 "type": "integer_4", "offset": 20, "length": 4 },
+        { "name": "stock",                  "type": "alpha_8",   "offset": 24, "length": 8 },
+        { "name": "price",                  "type": "price_4",   "offset": 32, "length": 4 }
+      ]
+    },
+
+    {
+      "type": "F",
+      "name": "AddOrderMPIDAttribution",
+      "size": 40,
+      "category": "add_order",
+      "description": "Adds a new attributed limit order to the book with market participant identification (MPID).",
+      "fields": [
+        { "name": "message_type",           "type": "alpha",     "offset": 0,  "length": 1, "value": "F" },
+        { "name": "stock_locate",           "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",        "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",              "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "order_reference_number", "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "buy_sell_indicator",     "type": "alpha",     "offset": 19, "length": 1, "values": { "B": "Buy", "S": "Sell" }},
+        { "name": "shares",                 "type": "integer_4", "offset": 20, "length": 4 },
+        { "name": "stock",                  "type": "alpha_8",   "offset": 24, "length": 8 },
+        { "name": "price",                  "type": "price_4",   "offset": 32, "length": 4 },
+        { "name": "attribution",            "type": "alpha_4",   "offset": 36, "length": 4, "notes": "MPID of the market participant" }
+      ]
+    },
+
+    {
+      "type": "E",
+      "name": "OrderExecuted",
+      "size": 31,
+      "category": "modify_order",
+      "description": "Indicates that an outstanding order has been executed in whole or in part at the order's display price.",
+      "fields": [
+        { "name": "message_type",           "type": "alpha",     "offset": 0,  "length": 1, "value": "E" },
+        { "name": "stock_locate",           "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",        "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",              "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "order_reference_number", "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "executed_shares",        "type": "integer_4", "offset": 19, "length": 4 },
+        { "name": "match_number",           "type": "integer_8", "offset": 23, "length": 8, "notes": "Day-unique execution identifier" }
+      ]
+    },
+
+    {
+      "type": "C",
+      "name": "OrderExecutedWithPrice",
+      "size": 36,
+      "category": "modify_order",
+      "description": "Indicates an execution at a price different from the initial display price (e.g., non-displayed portion or pegged order).",
+      "fields": [
+        { "name": "message_type",           "type": "alpha",     "offset": 0,  "length": 1, "value": "C" },
+        { "name": "stock_locate",           "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",        "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",              "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "order_reference_number", "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "executed_shares",        "type": "integer_4", "offset": 19, "length": 4 },
+        { "name": "match_number",           "type": "integer_8", "offset": 23, "length": 8 },
+        { "name": "printable",              "type": "alpha",     "offset": 31, "length": 1, "values": { "N": "Non-printable", "Y": "Printable" }},
+        { "name": "execution_price",        "type": "price_4",   "offset": 32, "length": 4 }
+      ]
+    },
+
+    {
+      "type": "X",
+      "name": "OrderCancel",
+      "size": 23,
+      "category": "modify_order",
+      "description": "Partial cancellation — reduces the display size of an order on the book. The order remains active with reduced quantity.",
+      "fields": [
+        { "name": "message_type",           "type": "alpha",     "offset": 0,  "length": 1, "value": "X" },
+        { "name": "stock_locate",           "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",        "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",              "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "order_reference_number", "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "cancelled_shares",       "type": "integer_4", "offset": 19, "length": 4 }
+      ]
+    },
+
+    {
+      "type": "D",
+      "name": "OrderDelete",
+      "size": 19,
+      "category": "modify_order",
+      "description": "Full cancellation — removes the entire order from the book. All remaining shares are cancelled.",
+      "fields": [
+        { "name": "message_type",           "type": "alpha",     "offset": 0,  "length": 1, "value": "D" },
+        { "name": "stock_locate",           "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",        "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",              "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "order_reference_number", "type": "integer_8", "offset": 11, "length": 8 }
+      ]
+    },
+
+    {
+      "type": "U",
+      "name": "OrderReplace",
+      "size": 35,
+      "category": "modify_order",
+      "description": "Replaces an existing order with a new one. The old order is deleted and a new order is inserted with a new reference number.",
+      "fields": [
+        { "name": "message_type",                    "type": "alpha",     "offset": 0,  "length": 1, "value": "U" },
+        { "name": "stock_locate",                    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",                 "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",                       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "original_order_reference_number", "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "new_order_reference_number",      "type": "integer_8", "offset": 19, "length": 8 },
+        { "name": "shares",                          "type": "integer_4", "offset": 27, "length": 4 },
+        { "name": "price",                           "type": "price_4",   "offset": 31, "length": 4 }
+      ]
+    },
+
+    {
+      "type": "P",
+      "name": "TradeNonCross",
+      "size": 44,
+      "category": "trade",
+      "description": "Non-cross trade message — indicates a match of non-displayable order interest at the midpoint.",
+      "fields": [
+        { "name": "message_type",           "type": "alpha",     "offset": 0,  "length": 1, "value": "P" },
+        { "name": "stock_locate",           "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",        "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",              "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "order_reference_number", "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "buy_sell_indicator",     "type": "alpha",     "offset": 19, "length": 1, "values": { "B": "Buy", "S": "Sell" }},
+        { "name": "shares",                 "type": "integer_4", "offset": 20, "length": 4 },
+        { "name": "stock",                  "type": "alpha_8",   "offset": 24, "length": 8 },
+        { "name": "price",                  "type": "price_4",   "offset": 32, "length": 4 },
+        { "name": "match_number",           "type": "integer_8", "offset": 36, "length": 8 }
+      ]
+    },
+
+    {
+      "type": "Q",
+      "name": "CrossTrade",
+      "size": 40,
+      "category": "trade",
+      "description": "Cross trade message — indicates a Nasdaq Opening, Closing, or IPO/Halt cross has been completed.",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "Q" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "shares",          "type": "integer_8", "offset": 11, "length": 8, "notes": "Total cross shares" },
+        { "name": "stock",           "type": "alpha_8",   "offset": 19, "length": 8 },
+        { "name": "cross_price",     "type": "price_4",   "offset": 27, "length": 4 },
+        { "name": "match_number",    "type": "integer_8", "offset": 31, "length": 8 },
+        { "name": "cross_type",      "type": "alpha",     "offset": 39, "length": 1, "values": {
+          "O": "Opening Cross",
+          "C": "Closing Cross",
+          "H": "Cross for IPO and halted/paused securities",
+          "I": "Intraday/Post-close Cross"
+        }}
+      ]
+    },
+
+    {
+      "type": "B",
+      "name": "BrokenTrade",
+      "size": 19,
+      "category": "trade",
+      "description": "Indicates that a previously reported trade has been broken (cancelled by the exchange).",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "B" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "match_number",    "type": "integer_8", "offset": 11, "length": 8, "notes": "Match number of the broken trade" }
+      ]
+    },
+
+    {
+      "type": "I",
+      "name": "NOII",
+      "size": 50,
+      "category": "noii",
+      "description": "Net Order Imbalance Indicator — disseminated for the Opening, Closing, and IPO/Halt crosses.",
+      "fields": [
+        { "name": "message_type",            "type": "alpha",     "offset": 0,  "length": 1, "value": "I" },
+        { "name": "stock_locate",            "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number",         "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",               "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "paired_shares",           "type": "integer_8", "offset": 11, "length": 8 },
+        { "name": "imbalance_shares",        "type": "integer_8", "offset": 19, "length": 8 },
+        { "name": "imbalance_direction",     "type": "alpha",     "offset": 27, "length": 1, "values": { "B": "Buy imbalance", "S": "Sell imbalance", "N": "No imbalance", "O": "Insufficient orders" }},
+        { "name": "stock",                   "type": "alpha_8",   "offset": 28, "length": 8 },
+        { "name": "far_price",               "type": "price_4",   "offset": 36, "length": 4 },
+        { "name": "near_price",              "type": "price_4",   "offset": 40, "length": 4 },
+        { "name": "current_reference_price", "type": "price_4",   "offset": 44, "length": 4 },
+        { "name": "cross_type",              "type": "alpha",     "offset": 48, "length": 1, "values": { "O": "Opening", "C": "Closing", "H": "IPO/Halted", "I": "Intraday/Post-close" }},
+        { "name": "price_variation_indicator", "type": "alpha",   "offset": 49, "length": 1 }
+      ]
+    },
+
+    {
+      "type": "N",
+      "name": "RetailInterest",
+      "size": 20,
+      "category": "noii",
+      "description": "Retail Price Improvement Indicator (RPII) — signals the presence of retail interest that may be eligible for price improvement.",
+      "fields": [
+        { "name": "message_type",    "type": "alpha",     "offset": 0,  "length": 1, "value": "N" },
+        { "name": "stock_locate",    "type": "integer_2", "offset": 1,  "length": 2 },
+        { "name": "tracking_number", "type": "integer_2", "offset": 3,  "length": 2 },
+        { "name": "timestamp",       "type": "integer_6", "offset": 5,  "length": 6 },
+        { "name": "stock",           "type": "alpha_8",   "offset": 11, "length": 8 },
+        { "name": "interest_flag",   "type": "alpha",     "offset": 19, "length": 1, "values": {
+          "B": "Retail interest on buy side",
+          "S": "Retail interest on sell side",
+          "A": "Retail interest on both sides",
+          "N": "No retail interest"
+        }}
+      ]
+    }
+  ]
+}
