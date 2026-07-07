@@ -38,7 +38,7 @@ static void BM_ParseAddOrderDirect(benchmark::State& state) {
         handler.handle(*msg);
         benchmark::ClobberMemory();
     }
-    state.SetBytesProcessed(state.iterations() * sizeof(AddOrder));
+    state.SetBytesProcessed(state.iterations() * static_cast<int64_t>(sizeof(AddOrder)));
 }
 BENCHMARK(BM_ParseAddOrderDirect);
 
@@ -52,7 +52,7 @@ static void BM_ParseStaticDispatch(benchmark::State& state) {
         dispatch_message(handler, 'A', reinterpret_cast<const char*>(buf));
         benchmark::ClobberMemory();
     }
-    state.SetBytesProcessed(state.iterations() * sizeof(AddOrder));
+    state.SetBytesProcessed(state.iterations() * static_cast<int64_t>(sizeof(AddOrder)));
 }
 BENCHMARK(BM_ParseStaticDispatch);
 
@@ -67,7 +67,7 @@ static void BM_ParseDispatchTable(benchmark::State& state) {
         table.dispatch(handler, 'A', reinterpret_cast<const char*>(buf));
         benchmark::ClobberMemory();
     }
-    state.SetBytesProcessed(state.iterations() * sizeof(AddOrder));
+    state.SetBytesProcessed(state.iterations() * static_cast<int64_t>(sizeof(AddOrder)));
 }
 BENCHMARK(BM_ParseDispatchTable);
 
@@ -88,7 +88,7 @@ static void BM_ParseStream(benchmark::State& state) {
         parse_stream(handler, reinterpret_cast<const char*>(stream.data()), stream.size());
         benchmark::ClobberMemory();
     }
-    state.SetBytesProcessed(state.iterations() * stream.size());
+    state.SetBytesProcessed(state.iterations() * static_cast<int64_t>(stream.size()));
 }
 BENCHMARK(BM_ParseStream);
 
