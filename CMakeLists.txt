@@ -14,19 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# ──────────────────────────────────────────────────────────────────────
-# Compiler-Specific Hardened Flags (HFT-grade)
-# ──────────────────────────────────────────────────────────────────────
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(
-        -Wall -Wextra -Wpedantic -Werror
-        -Wconversion -Wshadow -Wnon-virtual-dtor
-        -Wold-style-cast -Wcast-align -Wunused
-        -Woverloaded-virtual -Wformat=2
-        -fno-exceptions      # HFT: exceptions are latency poison
-        -fno-rtti            # HFT: RTTI is dead weight on the hot path
-    )
-endif()
+
 
 # Release-mode flags: -O3, -march=native, LTO
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
@@ -82,6 +70,21 @@ if(BUILD_BENCHMARKS)
     set(BENCHMARK_ENABLE_EXCEPTIONS OFF CACHE BOOL "" FORCE)
     set(BENCHMARK_ENABLE_LTO OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googlebenchmark)
+endif()
+
+# ──────────────────────────────────────────────────────────────────────
+# Compiler-Specific Hardened Flags (HFT-grade)
+# Note: Placed after FetchContent so third-party deps aren't built with -Werror
+# ──────────────────────────────────────────────────────────────────────
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(
+        -Wall -Wextra -Wpedantic -Werror
+        -Wconversion -Wshadow -Wnon-virtual-dtor
+        -Wold-style-cast -Wcast-align -Wunused
+        -Woverloaded-virtual -Wformat=2
+        -fno-exceptions      # HFT: exceptions are latency poison
+        -fno-rtti            # HFT: RTTI is dead weight on the hot path
+    )
 endif()
 
 # ──────────────────────────────────────────────────────────────────────
