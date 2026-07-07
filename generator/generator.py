@@ -130,7 +130,7 @@ def emit_accessors(field: dict) -> list[str]:
 
 def generate(schema_path: str, output_path: str) -> None:
     """Main generation pipeline: schema JSON → C++20 header."""
-    with open(schema_path, 'r') as f:
+    with open(schema_path, 'r', encoding="utf-8") as f:
         schema = json.load(f)
 
     messages = schema["messages"]

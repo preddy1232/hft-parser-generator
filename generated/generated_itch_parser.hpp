@@ -2,7 +2,7 @@
 // generated_itch_parser.hpp
 //
 // AUTO-GENERATED — DO NOT EDIT MANUALLY
-// Generated at : 2026-06-22 01:07:10 UTC
+// Generated at : 2026-07-07 08:00:45 UTC
 // Protocol     : NASDAQ TotalView-ITCH 5.0
 // Byte order   : big_endian
 // Messages     : 22
@@ -221,8 +221,8 @@ struct StockTradingAction {
 static_assert(sizeof(StockTradingAction) == 25, "sizeof(StockTradingAction) must match wire size 25");
 
 // ── RegSHORestriction ('Y', 20B) ──────────────────────────────────────────────────────
-// Reg SHO Short Sale Price Test Restricted Indicator â€” indicates short
-// sale circuit breaker status.
+// Reg SHO Short Sale Price Test Restricted Indicator — indicates short sale
+// circuit breaker status.
 struct RegSHORestriction {
     char       message_type_;  // always 'Y'
     uint16_t   stock_locate_;
@@ -271,8 +271,8 @@ struct MarketParticipantPosition {
 static_assert(sizeof(MarketParticipantPosition) == 26, "sizeof(MarketParticipantPosition) must match wire size 26");
 
 // ── MWCBDeclineLevel ('V', 35B) ───────────────────────────────────────────────────────
-// Market-Wide Circuit Breaker (MWCB) Decline Level â€” sets the three S&P
-// 500 decline thresholds.
+// Market-Wide Circuit Breaker (MWCB) Decline Level — sets the three S&P 500
+// decline thresholds.
 struct MWCBDeclineLevel {
     char       message_type_;  // always 'V'
     uint16_t   stock_locate_;
@@ -297,7 +297,7 @@ struct MWCBDeclineLevel {
 static_assert(sizeof(MWCBDeclineLevel) == 35, "sizeof(MWCBDeclineLevel) must match wire size 35");
 
 // ── MWCBStatus ('W', 12B) ─────────────────────────────────────────────────────────────
-// Market-Wide Circuit Breaker (MWCB) Status â€” indicates when a circuit
+// Market-Wide Circuit Breaker (MWCB) Status — indicates when a circuit
 // breaker has been triggered.
 struct MWCBStatus {
     char       message_type_;  // always 'W'
@@ -343,8 +343,8 @@ struct IPOQuotingPeriodUpdate {
 static_assert(sizeof(IPOQuotingPeriodUpdate) == 28, "sizeof(IPOQuotingPeriodUpdate) must match wire size 28");
 
 // ── LULDAuctionCollar ('J', 35B) ──────────────────────────────────────────────────────
-// Limit Up-Limit Down Auction Collar â€” reference and collar prices for
-// the reopening auction.
+// Limit Up-Limit Down Auction Collar — reference and collar prices for the
+// reopening auction.
 struct LULDAuctionCollar {
     char       message_type_;  // always 'J'
     uint16_t   stock_locate_;
@@ -510,8 +510,8 @@ struct OrderExecutedWithPrice {
 static_assert(sizeof(OrderExecutedWithPrice) == 36, "sizeof(OrderExecutedWithPrice) must match wire size 36");
 
 // ── OrderCancel ('X', 23B) ────────────────────────────────────────────────────────────
-// Partial cancellation â€” reduces the display size of an order on the
-// book. The order remains active with reduced quantity.
+// Partial cancellation — reduces the display size of an order on the book.
+// The order remains active with reduced quantity.
 struct OrderCancel {
     char       message_type_;  // always 'X'
     uint16_t   stock_locate_;
@@ -531,8 +531,8 @@ struct OrderCancel {
 static_assert(sizeof(OrderCancel) == 23, "sizeof(OrderCancel) must match wire size 23");
 
 // ── OrderDelete ('D', 19B) ────────────────────────────────────────────────────────────
-// Full cancellation â€” removes the entire order from the book. All
-// remaining shares are cancelled.
+// Full cancellation — removes the entire order from the book. All remaining
+// shares are cancelled.
 struct OrderDelete {
     char       message_type_;  // always 'D'
     uint16_t   stock_locate_;
@@ -576,7 +576,7 @@ struct OrderReplace {
 static_assert(sizeof(OrderReplace) == 35, "sizeof(OrderReplace) must match wire size 35");
 
 // ── TradeNonCross ('P', 44B) ──────────────────────────────────────────────────────────
-// Non-cross trade message â€” indicates a match of non-displayable order
+// Non-cross trade message — indicates a match of non-displayable order
 // interest at the midpoint.
 struct TradeNonCross {
     char       message_type_;  // always 'P'
@@ -607,7 +607,7 @@ struct TradeNonCross {
 static_assert(sizeof(TradeNonCross) == 44, "sizeof(TradeNonCross) must match wire size 44");
 
 // ── CrossTrade ('Q', 40B) ─────────────────────────────────────────────────────────────
-// Cross trade message â€” indicates a Nasdaq Opening, Closing, or IPO/Halt
+// Cross trade message — indicates a Nasdaq Opening, Closing, or IPO/Halt
 // cross has been completed.
 struct CrossTrade {
     char       message_type_;  // always 'Q'
@@ -655,7 +655,7 @@ struct BrokenTrade {
 static_assert(sizeof(BrokenTrade) == 19, "sizeof(BrokenTrade) must match wire size 19");
 
 // ── NOII ('I', 50B) ───────────────────────────────────────────────────────────────────
-// Net Order Imbalance Indicator â€” disseminated for the Opening, Closing,
+// Net Order Imbalance Indicator — disseminated for the Opening, Closing,
 // and IPO/Halt crosses.
 struct NOII {
     char       message_type_;  // always 'I'
@@ -694,7 +694,7 @@ struct NOII {
 static_assert(sizeof(NOII) == 50, "sizeof(NOII) must match wire size 50");
 
 // ── RetailInterest ('N', 20B) ─────────────────────────────────────────────────────────
-// Retail Price Improvement Indicator (RPII) â€” signals the presence of
+// Retail Price Improvement Indicator (RPII) — signals the presence of
 // retail interest that may be eligible for price improvement.
 struct RetailInterest {
     char       message_type_;  // always 'N'
