@@ -111,8 +111,17 @@ target_link_libraries(itch_reader PRIVATE itch_parser)
 # ──────────────────────────────────────────────────────────────────────
 # Limit Order Book Engine (Phase 2)
 # ──────────────────────────────────────────────────────────────────────
-add_executable(itch_lob src/lob_main.cpp)
-target_link_libraries(itch_lob PRIVATE itch_parser)
+    add_executable(itch_lob src/lob_main.cpp)
+    target_link_libraries(itch_lob PRIVATE itch_parser)
+    
+    # ──────────────────────────────────────────────────────────────────────
+    # Live MoldUDP64 Multicast Ingestion (Phase 3)
+    # ──────────────────────────────────────────────────────────────────────
+    add_executable(itch_live src/live_main.cpp)
+    target_link_libraries(itch_live PRIVATE itch_parser)
+    if(WIN32)
+        target_link_libraries(itch_live PRIVATE ws2_32)
+    endif()
 
 # ──────────────────────────────────────────────────────────────────────
 # Unit Tests
