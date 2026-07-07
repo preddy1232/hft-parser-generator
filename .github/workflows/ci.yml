@@ -117,13 +117,13 @@ jobs:
             grep -v '^// Generated at' "$1"
           }
 
-          strip_timestamp generated/generated_itch_parser.hpp > /tmp/committed.hpp
+          strip_timestamp include/generated_itch_parser.hpp > /tmp/committed.hpp
           strip_timestamp generated_ci/generated_itch_parser.hpp > /tmp/regenerated.hpp
 
           if ! diff -u /tmp/committed.hpp /tmp/regenerated.hpp; then
             echo ""
             echo "::error::Generated header differs from committed version!"
-            echo "Run: python3 generator/generator.py schema/itch50_schema.json generated/generated_itch_parser.hpp"
+            echo "Run: python3 generator/generator.py schema/itch50_schema.json include/generated_itch_parser.hpp"
             exit 1
           fi
           echo "✓ Generated header matches committed version."
