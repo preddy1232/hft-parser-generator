@@ -63,6 +63,12 @@ if(BUILD_TESTS)
     # GTest uses exceptions internally — allow it for the test target only
     set(gtest_disable_pthreads OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
+    # GTest needs RTTI and exceptions — override the global -fno-* flags
+    # Also disable LTO so the test binary can link against regular object code
+    target_compile_options(gtest PRIVATE -frtti -fexceptions -fno-lto)
+    target_compile_options(gtest_main PRIVATE -frtti -fexceptions -fno-lto)
+    target_link_options(gtest PRIVATE -fno-lto)
+    target_link_options(gtest_main PRIVATE -fno-lto)
 endif()
 
 if(BUILD_BENCHMARKS)
@@ -111,10 +117,13 @@ target_link_libraries(itch_lob PRIVATE itch_parser)
 if(BUILD_TESTS)
     enable_testing()
     add_executable(itch_tests test/parser_test.cpp)
-    # Re-enable exceptions for the test binary only (GTest requires them)
+    # Re-enable exceptions/RTTI for the test binary (GTest requires them)
+    # -Wno-conversion: test helpers (write_be16 etc.) do safe masked casts
+    # -fno-lto: prevent LTO from mixing RTTI/non-RTTI object files at link time
     target_compile_options(itch_tests PRIVATE
-        -fexceptions -frtti
+        -fexceptions -frtti -Wno-conversion -fno-lto
     )
+    target_link_options(itch_tests PRIVATE -fno-lto)
     target_link_libraries(itch_tests PRIVATE
         itch_parser
         GTest::gtest_main

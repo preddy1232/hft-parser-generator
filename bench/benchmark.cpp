@@ -29,7 +29,7 @@ static void BM_ParseAddOrderDirect(benchmark::State& state) {
     buf[0] = 'A';
     
     // Setup a dummy buffer
-    for(int i=0; i<36; ++i) buf[i] = i;
+    for(int i=0; i<36; ++i) buf[i] = static_cast<uint8_t>(i);
 
     BenchHandler handler;
     auto* msg = reinterpret_cast<const AddOrder*>(buf);

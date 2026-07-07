@@ -1163,7 +1163,34 @@ TEST(DispatchTests, O1_DispatchTable) {
 
 TEST(DispatchTests, StaticDispatcher_AllValidTypes_ReturnTrue) {
     // Verify every valid message type returns true (even if unhandled)
-    MockHandler handler;
+    // Use a zeroed buffer — we only care about dispatch returning true,
+    // not field values, so we use a handler with no field assertions.
+    struct NoOpHandler {
+        void handle(const SystemEvent&) {}
+        void handle(const StockDirectory&) {}
+        void handle(const StockTradingAction&) {}
+        void handle(const RegSHORestriction&) {}
+        void handle(const MarketParticipantPosition&) {}
+        void handle(const MWCBDeclineLevel&) {}
+        void handle(const MWCBStatus&) {}
+        void handle(const IPOQuotingPeriodUpdate&) {}
+        void handle(const LULDAuctionCollar&) {}
+        void handle(const OperationalHalt&) {}
+        void handle(const AddOrder&) {}
+        void handle(const AddOrderMPIDAttribution&) {}
+        void handle(const OrderExecuted&) {}
+        void handle(const OrderExecutedWithPrice&) {}
+        void handle(const OrderCancel&) {}
+        void handle(const OrderDelete&) {}
+        void handle(const OrderReplace&) {}
+        void handle(const TradeNonCross&) {}
+        void handle(const CrossTrade&) {}
+        void handle(const BrokenTrade&) {}
+        void handle(const NOII&) {}
+        void handle(const RetailInterest&) {}
+    };
+
+    NoOpHandler handler;
     uint8_t buf[50] = {0};  // Largest message
 
     for (char type : ALL_MESSAGE_TYPES) {
