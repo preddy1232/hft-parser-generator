@@ -1,0 +1,1022 @@
+// =============================================================================
+// generated_itch_parser.hpp
+//
+// AUTO-GENERATED — DO NOT EDIT MANUALLY
+// Generated at : 2026-06-22 01:07:10 UTC
+// Protocol     : NASDAQ TotalView-ITCH 5.0
+// Byte order   : big_endian
+// Messages     : 22
+// Total fields : 179
+//
+// Zero-copy, zero-allocation NASDAQ ITCH 5.0 parser.
+// Structs are #pragma pack(1) to match exact wire layout.
+// Use reinterpret_cast<const T*>(buffer) for zero-copy overlay.
+// All multi-byte integers are converted from big-endian (network
+// byte order) to host byte order via the detail:: helpers in
+// endian_utils.hpp.  Alpha fields return std::string_view pointing
+// directly into the source buffer (zero-copy).
+// =============================================================================
+#pragma once
+
+#include "endian_utils.hpp"
+
+#include <cstdint>
+#include <cstddef>
+#include <string_view>
+
+namespace itch50 {
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Message Type Constants
+// ─────────────────────────────────────────────────────────────────────────────
+namespace msg {
+    inline constexpr char SystemEvent                              = 'S';
+    inline constexpr char StockDirectory                           = 'R';
+    inline constexpr char StockTradingAction                       = 'H';
+    inline constexpr char RegSHORestriction                        = 'Y';
+    inline constexpr char MarketParticipantPosition                = 'L';
+    inline constexpr char MWCBDeclineLevel                         = 'V';
+    inline constexpr char MWCBStatus                               = 'W';
+    inline constexpr char IPOQuotingPeriodUpdate                   = 'K';
+    inline constexpr char LULDAuctionCollar                        = 'J';
+    inline constexpr char OperationalHalt                          = 'h';
+    inline constexpr char AddOrder                                 = 'A';
+    inline constexpr char AddOrderMPIDAttribution                  = 'F';
+    inline constexpr char OrderExecuted                            = 'E';
+    inline constexpr char OrderExecutedWithPrice                   = 'C';
+    inline constexpr char OrderCancel                              = 'X';
+    inline constexpr char OrderDelete                              = 'D';
+    inline constexpr char OrderReplace                             = 'U';
+    inline constexpr char TradeNonCross                            = 'P';
+    inline constexpr char CrossTrade                               = 'Q';
+    inline constexpr char BrokenTrade                              = 'B';
+    inline constexpr char NOII                                     = 'I';
+    inline constexpr char RetailInterest                           = 'N';
+} // namespace msg
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Compile-time message size lookup (O(1) via switch)
+// Returns 0 for unknown message types.
+// ─────────────────────────────────────────────────────────────────────────────
+[[nodiscard]] constexpr std::size_t message_size(char type) noexcept {
+    switch (type) {
+        case 'S': return  12;  // SystemEvent
+        case 'R': return  39;  // StockDirectory
+        case 'H': return  25;  // StockTradingAction
+        case 'Y': return  20;  // RegSHORestriction
+        case 'L': return  26;  // MarketParticipantPosition
+        case 'V': return  35;  // MWCBDeclineLevel
+        case 'W': return  12;  // MWCBStatus
+        case 'K': return  28;  // IPOQuotingPeriodUpdate
+        case 'J': return  35;  // LULDAuctionCollar
+        case 'h': return  21;  // OperationalHalt
+        case 'A': return  36;  // AddOrder
+        case 'F': return  40;  // AddOrderMPIDAttribution
+        case 'E': return  31;  // OrderExecuted
+        case 'C': return  36;  // OrderExecutedWithPrice
+        case 'X': return  23;  // OrderCancel
+        case 'D': return  19;  // OrderDelete
+        case 'U': return  35;  // OrderReplace
+        case 'P': return  44;  // TradeNonCross
+        case 'Q': return  40;  // CrossTrade
+        case 'B': return  19;  // BrokenTrade
+        case 'I': return  50;  // NOII
+        case 'N': return  20;  // RetailInterest
+        default:      return   0;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Message name lookup (for logging/debug — not on the hot path)
+// ─────────────────────────────────────────────────────────────────────────────
+[[nodiscard]] constexpr const char* message_name(char type) noexcept {
+    switch (type) {
+        case 'S': return "SystemEvent";
+        case 'R': return "StockDirectory";
+        case 'H': return "StockTradingAction";
+        case 'Y': return "RegSHORestriction";
+        case 'L': return "MarketParticipantPosition";
+        case 'V': return "MWCBDeclineLevel";
+        case 'W': return "MWCBStatus";
+        case 'K': return "IPOQuotingPeriodUpdate";
+        case 'J': return "LULDAuctionCollar";
+        case 'h': return "OperationalHalt";
+        case 'A': return "AddOrder";
+        case 'F': return "AddOrderMPIDAttribution";
+        case 'E': return "OrderExecuted";
+        case 'C': return "OrderExecutedWithPrice";
+        case 'X': return "OrderCancel";
+        case 'D': return "OrderDelete";
+        case 'U': return "OrderReplace";
+        case 'P': return "TradeNonCross";
+        case 'Q': return "CrossTrade";
+        case 'B': return "BrokenTrade";
+        case 'I': return "NOII";
+        case 'N': return "RetailInterest";
+        default:      return "Unknown";
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Packed Message Structs
+//
+// #pragma pack(push, 1) ensures zero padding between fields,
+// making sizeof(T) == wire_size for every struct.
+// Overlay onto a raw buffer via:
+//     auto* msg = reinterpret_cast<const AddOrder*>(buf);
+// ─────────────────────────────────────────────────────────────────────────────
+
+#pragma pack(push, 1)
+
+// ── SystemEvent ('S', 12B) ────────────────────────────────────────────────────────────
+// Signals a market or data feed handler event (start/end of day, halts).
+struct SystemEvent {
+    char       message_type_;  // always 'S'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       event_code_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] char event_code() const noexcept { return event_code_; }
+};
+static_assert(sizeof(SystemEvent) == 12, "sizeof(SystemEvent) must match wire size 12");
+
+// ── StockDirectory ('R', 39B) ─────────────────────────────────────────────────────────
+// Disseminated at start of day for all active securities. Provides symbol,
+// market tier, and financial status.
+struct StockDirectory {
+    char       message_type_;  // always 'R'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       stock_[8];
+    char       market_category_;
+    char       financial_status_indicator_;
+    uint32_t   round_lot_size_;
+    char       round_lots_only_;
+    char       issue_classification_;
+    char       issue_sub_type_[2];
+    char       authenticity_;
+    char       short_sale_threshold_indicator_;
+    char       ipo_flag_;
+    char       luld_reference_price_tier_;
+    char       etp_flag_;
+    uint32_t   etp_leverage_factor_;
+    char       inverse_indicator_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] char market_category() const noexcept { return market_category_; }
+    [[nodiscard]] char financial_status_indicator() const noexcept { return financial_status_indicator_; }
+    [[nodiscard]] uint32_t round_lot_size() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&round_lot_size_)); }
+    [[nodiscard]] char round_lots_only() const noexcept { return round_lots_only_; }
+    [[nodiscard]] char issue_classification() const noexcept { return issue_classification_; }
+    [[nodiscard]] std::string_view issue_sub_type() const noexcept { return {issue_sub_type_, 2}; }
+    [[nodiscard]] std::string_view issue_sub_type_trimmed() const noexcept { return detail::trim_right(issue_sub_type()); }
+    [[nodiscard]] char authenticity() const noexcept { return authenticity_; }
+    [[nodiscard]] char short_sale_threshold_indicator() const noexcept { return short_sale_threshold_indicator_; }
+    [[nodiscard]] char ipo_flag() const noexcept { return ipo_flag_; }
+    [[nodiscard]] char luld_reference_price_tier() const noexcept { return luld_reference_price_tier_; }
+    [[nodiscard]] char etp_flag() const noexcept { return etp_flag_; }
+    [[nodiscard]] uint32_t etp_leverage_factor() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&etp_leverage_factor_)); }
+    [[nodiscard]] char inverse_indicator() const noexcept { return inverse_indicator_; }
+};
+static_assert(sizeof(StockDirectory) == 39, "sizeof(StockDirectory) must match wire size 39");
+
+// ── StockTradingAction ('H', 25B) ─────────────────────────────────────────────────────
+// Indicates trading halt, quotation resumption, or a price indication for a
+// specific security.
+struct StockTradingAction {
+    char       message_type_;  // always 'H'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       stock_[8];
+    char       trading_state_;
+    char       reserved_;
+    char       reason_[4];
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] char trading_state() const noexcept { return trading_state_; }
+    [[nodiscard]] char reserved() const noexcept { return reserved_; }
+    [[nodiscard]] std::string_view reason() const noexcept { return {reason_, 4}; }
+    [[nodiscard]] std::string_view reason_trimmed() const noexcept { return detail::trim_right(reason()); }
+};
+static_assert(sizeof(StockTradingAction) == 25, "sizeof(StockTradingAction) must match wire size 25");
+
+// ── RegSHORestriction ('Y', 20B) ──────────────────────────────────────────────────────
+// Reg SHO Short Sale Price Test Restricted Indicator â€” indicates short
+// sale circuit breaker status.
+struct RegSHORestriction {
+    char       message_type_;  // always 'Y'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       stock_[8];
+    char       reg_sho_action_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] char reg_sho_action() const noexcept { return reg_sho_action_; }
+};
+static_assert(sizeof(RegSHORestriction) == 20, "sizeof(RegSHORestriction) must match wire size 20");
+
+// ── MarketParticipantPosition ('L', 26B) ──────────────────────────────────────────────
+// Provides market-maker registration status for each Nasdaq-listed security.
+struct MarketParticipantPosition {
+    char       message_type_;  // always 'L'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       mpid_[4];
+    char       stock_[8];
+    char       primary_market_maker_;
+    char       market_maker_mode_;
+    char       market_participant_state_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view mpid() const noexcept { return {mpid_, 4}; }
+    [[nodiscard]] std::string_view mpid_trimmed() const noexcept { return detail::trim_right(mpid()); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] char primary_market_maker() const noexcept { return primary_market_maker_; }
+    [[nodiscard]] char market_maker_mode() const noexcept { return market_maker_mode_; }
+    [[nodiscard]] char market_participant_state() const noexcept { return market_participant_state_; }
+};
+static_assert(sizeof(MarketParticipantPosition) == 26, "sizeof(MarketParticipantPosition) must match wire size 26");
+
+// ── MWCBDeclineLevel ('V', 35B) ───────────────────────────────────────────────────────
+// Market-Wide Circuit Breaker (MWCB) Decline Level â€” sets the three S&P
+// 500 decline thresholds.
+struct MWCBDeclineLevel {
+    char       message_type_;  // always 'V'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   level_1_;
+    uint64_t   level_2_;
+    uint64_t   level_3_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t level_1() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&level_1_)); }
+    [[nodiscard]] double level_1_double() const noexcept { return static_cast<double>(level_1()) * 0.00000001; }
+    [[nodiscard]] uint64_t level_2() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&level_2_)); }
+    [[nodiscard]] double level_2_double() const noexcept { return static_cast<double>(level_2()) * 0.00000001; }
+    [[nodiscard]] uint64_t level_3() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&level_3_)); }
+    [[nodiscard]] double level_3_double() const noexcept { return static_cast<double>(level_3()) * 0.00000001; }
+};
+static_assert(sizeof(MWCBDeclineLevel) == 35, "sizeof(MWCBDeclineLevel) must match wire size 35");
+
+// ── MWCBStatus ('W', 12B) ─────────────────────────────────────────────────────────────
+// Market-Wide Circuit Breaker (MWCB) Status â€” indicates when a circuit
+// breaker has been triggered.
+struct MWCBStatus {
+    char       message_type_;  // always 'W'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       breached_level_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] char breached_level() const noexcept { return breached_level_; }
+};
+static_assert(sizeof(MWCBStatus) == 12, "sizeof(MWCBStatus) must match wire size 12");
+
+// ── IPOQuotingPeriodUpdate ('K', 28B) ─────────────────────────────────────────────────
+// Indicates the anticipated IPO quotation release time and price for
+// securities coming to market.
+struct IPOQuotingPeriodUpdate {
+    char       message_type_;  // always 'K'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       stock_[8];
+    uint32_t   ipo_quotation_release_time_;
+    char       ipo_quotation_release_qualifier_;
+    uint32_t   ipo_price_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] uint32_t ipo_quotation_release_time() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&ipo_quotation_release_time_)); }
+    [[nodiscard]] char ipo_quotation_release_qualifier() const noexcept { return ipo_quotation_release_qualifier_; }
+    [[nodiscard]] uint32_t ipo_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&ipo_price_)); }
+    [[nodiscard]] double ipo_price_double() const noexcept { return static_cast<double>(ipo_price()) * 0.0001; }
+};
+static_assert(sizeof(IPOQuotingPeriodUpdate) == 28, "sizeof(IPOQuotingPeriodUpdate) must match wire size 28");
+
+// ── LULDAuctionCollar ('J', 35B) ──────────────────────────────────────────────────────
+// Limit Up-Limit Down Auction Collar â€” reference and collar prices for
+// the reopening auction.
+struct LULDAuctionCollar {
+    char       message_type_;  // always 'J'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       stock_[8];
+    uint32_t   auction_collar_reference_price_;
+    uint32_t   upper_auction_collar_price_;
+    uint32_t   lower_auction_collar_price_;
+    uint32_t   auction_collar_extension_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] uint32_t auction_collar_reference_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&auction_collar_reference_price_)); }
+    [[nodiscard]] double auction_collar_reference_price_double() const noexcept { return static_cast<double>(auction_collar_reference_price()) * 0.0001; }
+    [[nodiscard]] uint32_t upper_auction_collar_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&upper_auction_collar_price_)); }
+    [[nodiscard]] double upper_auction_collar_price_double() const noexcept { return static_cast<double>(upper_auction_collar_price()) * 0.0001; }
+    [[nodiscard]] uint32_t lower_auction_collar_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&lower_auction_collar_price_)); }
+    [[nodiscard]] double lower_auction_collar_price_double() const noexcept { return static_cast<double>(lower_auction_collar_price()) * 0.0001; }
+    [[nodiscard]] uint32_t auction_collar_extension() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&auction_collar_extension_)); }
+};
+static_assert(sizeof(LULDAuctionCollar) == 35, "sizeof(LULDAuctionCollar) must match wire size 35");
+
+// ── OperationalHalt ('h', 21B) ────────────────────────────────────────────────────────
+// Operational halt or resumption of trading for a specific security on a
+// specific market center.
+struct OperationalHalt {
+    char       message_type_;  // always 'h'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       stock_[8];
+    char       market_code_;
+    char       operational_halt_action_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] char market_code() const noexcept { return market_code_; }
+    [[nodiscard]] char operational_halt_action() const noexcept { return operational_halt_action_; }
+};
+static_assert(sizeof(OperationalHalt) == 21, "sizeof(OperationalHalt) must match wire size 21");
+
+// ── AddOrder ('A', 36B) ───────────────────────────────────────────────────────────────
+// Adds a new unattributed limit order to the book. No market participant
+// identification.
+struct AddOrder {
+    char       message_type_;  // always 'A'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   order_reference_number_;
+    char       buy_sell_indicator_;
+    uint32_t   shares_;
+    char       stock_[8];
+    uint32_t   price_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&order_reference_number_)); }
+    [[nodiscard]] char buy_sell_indicator() const noexcept { return buy_sell_indicator_; }
+    [[nodiscard]] uint32_t shares() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&shares_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] uint32_t price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&price_)); }
+    [[nodiscard]] double price_double() const noexcept { return static_cast<double>(price()) * 0.0001; }
+};
+static_assert(sizeof(AddOrder) == 36, "sizeof(AddOrder) must match wire size 36");
+
+// ── AddOrderMPIDAttribution ('F', 40B) ────────────────────────────────────────────────
+// Adds a new attributed limit order to the book with market participant
+// identification (MPID).
+struct AddOrderMPIDAttribution {
+    char       message_type_;  // always 'F'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   order_reference_number_;
+    char       buy_sell_indicator_;
+    uint32_t   shares_;
+    char       stock_[8];
+    uint32_t   price_;
+    char       attribution_[4];
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&order_reference_number_)); }
+    [[nodiscard]] char buy_sell_indicator() const noexcept { return buy_sell_indicator_; }
+    [[nodiscard]] uint32_t shares() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&shares_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] uint32_t price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&price_)); }
+    [[nodiscard]] double price_double() const noexcept { return static_cast<double>(price()) * 0.0001; }
+    [[nodiscard]] std::string_view attribution() const noexcept { return {attribution_, 4}; }
+    [[nodiscard]] std::string_view attribution_trimmed() const noexcept { return detail::trim_right(attribution()); }
+};
+static_assert(sizeof(AddOrderMPIDAttribution) == 40, "sizeof(AddOrderMPIDAttribution) must match wire size 40");
+
+// ── OrderExecuted ('E', 31B) ──────────────────────────────────────────────────────────
+// Indicates that an outstanding order has been executed in whole or in part
+// at the order's display price.
+struct OrderExecuted {
+    char       message_type_;  // always 'E'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   order_reference_number_;
+    uint32_t   executed_shares_;
+    uint64_t   match_number_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&order_reference_number_)); }
+    [[nodiscard]] uint32_t executed_shares() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&executed_shares_)); }
+    [[nodiscard]] uint64_t match_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&match_number_)); }
+};
+static_assert(sizeof(OrderExecuted) == 31, "sizeof(OrderExecuted) must match wire size 31");
+
+// ── OrderExecutedWithPrice ('C', 36B) ─────────────────────────────────────────────────
+// Indicates an execution at a price different from the initial display
+// price (e.g., non-displayed portion or pegged order).
+struct OrderExecutedWithPrice {
+    char       message_type_;  // always 'C'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   order_reference_number_;
+    uint32_t   executed_shares_;
+    uint64_t   match_number_;
+    char       printable_;
+    uint32_t   execution_price_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&order_reference_number_)); }
+    [[nodiscard]] uint32_t executed_shares() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&executed_shares_)); }
+    [[nodiscard]] uint64_t match_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&match_number_)); }
+    [[nodiscard]] char printable() const noexcept { return printable_; }
+    [[nodiscard]] uint32_t execution_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&execution_price_)); }
+    [[nodiscard]] double execution_price_double() const noexcept { return static_cast<double>(execution_price()) * 0.0001; }
+};
+static_assert(sizeof(OrderExecutedWithPrice) == 36, "sizeof(OrderExecutedWithPrice) must match wire size 36");
+
+// ── OrderCancel ('X', 23B) ────────────────────────────────────────────────────────────
+// Partial cancellation â€” reduces the display size of an order on the
+// book. The order remains active with reduced quantity.
+struct OrderCancel {
+    char       message_type_;  // always 'X'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   order_reference_number_;
+    uint32_t   cancelled_shares_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&order_reference_number_)); }
+    [[nodiscard]] uint32_t cancelled_shares() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&cancelled_shares_)); }
+};
+static_assert(sizeof(OrderCancel) == 23, "sizeof(OrderCancel) must match wire size 23");
+
+// ── OrderDelete ('D', 19B) ────────────────────────────────────────────────────────────
+// Full cancellation â€” removes the entire order from the book. All
+// remaining shares are cancelled.
+struct OrderDelete {
+    char       message_type_;  // always 'D'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   order_reference_number_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&order_reference_number_)); }
+};
+static_assert(sizeof(OrderDelete) == 19, "sizeof(OrderDelete) must match wire size 19");
+
+// ── OrderReplace ('U', 35B) ───────────────────────────────────────────────────────────
+// Replaces an existing order with a new one. The old order is deleted and a
+// new order is inserted with a new reference number.
+struct OrderReplace {
+    char       message_type_;  // always 'U'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   original_order_reference_number_;
+    uint64_t   new_order_reference_number_;
+    uint32_t   shares_;
+    uint32_t   price_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t original_order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&original_order_reference_number_)); }
+    [[nodiscard]] uint64_t new_order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&new_order_reference_number_)); }
+    [[nodiscard]] uint32_t shares() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&shares_)); }
+    [[nodiscard]] uint32_t price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&price_)); }
+    [[nodiscard]] double price_double() const noexcept { return static_cast<double>(price()) * 0.0001; }
+};
+static_assert(sizeof(OrderReplace) == 35, "sizeof(OrderReplace) must match wire size 35");
+
+// ── TradeNonCross ('P', 44B) ──────────────────────────────────────────────────────────
+// Non-cross trade message â€” indicates a match of non-displayable order
+// interest at the midpoint.
+struct TradeNonCross {
+    char       message_type_;  // always 'P'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   order_reference_number_;
+    char       buy_sell_indicator_;
+    uint32_t   shares_;
+    char       stock_[8];
+    uint32_t   price_;
+    uint64_t   match_number_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t order_reference_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&order_reference_number_)); }
+    [[nodiscard]] char buy_sell_indicator() const noexcept { return buy_sell_indicator_; }
+    [[nodiscard]] uint32_t shares() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&shares_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] uint32_t price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&price_)); }
+    [[nodiscard]] double price_double() const noexcept { return static_cast<double>(price()) * 0.0001; }
+    [[nodiscard]] uint64_t match_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&match_number_)); }
+};
+static_assert(sizeof(TradeNonCross) == 44, "sizeof(TradeNonCross) must match wire size 44");
+
+// ── CrossTrade ('Q', 40B) ─────────────────────────────────────────────────────────────
+// Cross trade message â€” indicates a Nasdaq Opening, Closing, or IPO/Halt
+// cross has been completed.
+struct CrossTrade {
+    char       message_type_;  // always 'Q'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   shares_;
+    char       stock_[8];
+    uint32_t   cross_price_;
+    uint64_t   match_number_;
+    char       cross_type_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t shares() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&shares_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] uint32_t cross_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&cross_price_)); }
+    [[nodiscard]] double cross_price_double() const noexcept { return static_cast<double>(cross_price()) * 0.0001; }
+    [[nodiscard]] uint64_t match_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&match_number_)); }
+    [[nodiscard]] char cross_type() const noexcept { return cross_type_; }
+};
+static_assert(sizeof(CrossTrade) == 40, "sizeof(CrossTrade) must match wire size 40");
+
+// ── BrokenTrade ('B', 19B) ────────────────────────────────────────────────────────────
+// Indicates that a previously reported trade has been broken (cancelled by
+// the exchange).
+struct BrokenTrade {
+    char       message_type_;  // always 'B'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   match_number_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t match_number() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&match_number_)); }
+};
+static_assert(sizeof(BrokenTrade) == 19, "sizeof(BrokenTrade) must match wire size 19");
+
+// ── NOII ('I', 50B) ───────────────────────────────────────────────────────────────────
+// Net Order Imbalance Indicator â€” disseminated for the Opening, Closing,
+// and IPO/Halt crosses.
+struct NOII {
+    char       message_type_;  // always 'I'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    uint64_t   paired_shares_;
+    uint64_t   imbalance_shares_;
+    char       imbalance_direction_;
+    char       stock_[8];
+    uint32_t   far_price_;
+    uint32_t   near_price_;
+    uint32_t   current_reference_price_;
+    char       cross_type_;
+    char       price_variation_indicator_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] uint64_t paired_shares() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&paired_shares_)); }
+    [[nodiscard]] uint64_t imbalance_shares() const noexcept { return detail::read_be64(reinterpret_cast<const char*>(&imbalance_shares_)); }
+    [[nodiscard]] char imbalance_direction() const noexcept { return imbalance_direction_; }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] uint32_t far_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&far_price_)); }
+    [[nodiscard]] double far_price_double() const noexcept { return static_cast<double>(far_price()) * 0.0001; }
+    [[nodiscard]] uint32_t near_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&near_price_)); }
+    [[nodiscard]] double near_price_double() const noexcept { return static_cast<double>(near_price()) * 0.0001; }
+    [[nodiscard]] uint32_t current_reference_price() const noexcept { return detail::read_be32(reinterpret_cast<const char*>(&current_reference_price_)); }
+    [[nodiscard]] double current_reference_price_double() const noexcept { return static_cast<double>(current_reference_price()) * 0.0001; }
+    [[nodiscard]] char cross_type() const noexcept { return cross_type_; }
+    [[nodiscard]] char price_variation_indicator() const noexcept { return price_variation_indicator_; }
+};
+static_assert(sizeof(NOII) == 50, "sizeof(NOII) must match wire size 50");
+
+// ── RetailInterest ('N', 20B) ─────────────────────────────────────────────────────────
+// Retail Price Improvement Indicator (RPII) â€” signals the presence of
+// retail interest that may be eligible for price improvement.
+struct RetailInterest {
+    char       message_type_;  // always 'N'
+    uint16_t   stock_locate_;
+    uint16_t   tracking_number_;
+    uint8_t    timestamp_[6];
+    char       stock_[8];
+    char       interest_flag_;
+
+    // ── Accessors (zero-copy, endian-aware) ──
+    [[nodiscard]] char message_type() const noexcept { return message_type_; }
+    [[nodiscard]] uint16_t stock_locate() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&stock_locate_)); }
+    [[nodiscard]] uint16_t tracking_number() const noexcept { return detail::read_be16(reinterpret_cast<const char*>(&tracking_number_)); }
+    [[nodiscard]] uint64_t timestamp() const noexcept { return detail::read_be48(reinterpret_cast<const char*>(timestamp_)); }
+    [[nodiscard]] std::string_view stock() const noexcept { return {stock_, 8}; }
+    [[nodiscard]] std::string_view stock_trimmed() const noexcept { return detail::trim_right(stock()); }
+    [[nodiscard]] char interest_flag() const noexcept { return interest_flag_; }
+};
+static_assert(sizeof(RetailInterest) == 20, "sizeof(RetailInterest) must match wire size 20");
+
+#pragma pack(pop)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Concept for a message handler
+// ─────────────────────────────────────────────────────────────────────────────
+template<typename Handler, typename Message>
+concept CanHandle = requires(Handler& h, const Message& msg) {
+    h.handle(msg);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Switch-based Dispatcher (Static Dispatch)
+//
+// Dispatches a raw buffer to the appropriate strongly-typed handle() method
+// on the provided Handler instance. Only instantiates calls for messages
+// the handler actually supports (via the CanHandle concept).
+//
+// Returns true if dispatched successfully, false if the message type is unknown.
+// ─────────────────────────────────────────────────────────────────────────────
+template<typename Handler>
+inline bool dispatch_message(Handler& handler, char type, const char* buffer) {
+    switch(type) {
+        case 'S':
+            if constexpr (CanHandle<Handler, SystemEvent>) {
+                handler.handle(*reinterpret_cast<const SystemEvent*>(buffer));
+            }
+            break;
+        case 'R':
+            if constexpr (CanHandle<Handler, StockDirectory>) {
+                handler.handle(*reinterpret_cast<const StockDirectory*>(buffer));
+            }
+            break;
+        case 'H':
+            if constexpr (CanHandle<Handler, StockTradingAction>) {
+                handler.handle(*reinterpret_cast<const StockTradingAction*>(buffer));
+            }
+            break;
+        case 'Y':
+            if constexpr (CanHandle<Handler, RegSHORestriction>) {
+                handler.handle(*reinterpret_cast<const RegSHORestriction*>(buffer));
+            }
+            break;
+        case 'L':
+            if constexpr (CanHandle<Handler, MarketParticipantPosition>) {
+                handler.handle(*reinterpret_cast<const MarketParticipantPosition*>(buffer));
+            }
+            break;
+        case 'V':
+            if constexpr (CanHandle<Handler, MWCBDeclineLevel>) {
+                handler.handle(*reinterpret_cast<const MWCBDeclineLevel*>(buffer));
+            }
+            break;
+        case 'W':
+            if constexpr (CanHandle<Handler, MWCBStatus>) {
+                handler.handle(*reinterpret_cast<const MWCBStatus*>(buffer));
+            }
+            break;
+        case 'K':
+            if constexpr (CanHandle<Handler, IPOQuotingPeriodUpdate>) {
+                handler.handle(*reinterpret_cast<const IPOQuotingPeriodUpdate*>(buffer));
+            }
+            break;
+        case 'J':
+            if constexpr (CanHandle<Handler, LULDAuctionCollar>) {
+                handler.handle(*reinterpret_cast<const LULDAuctionCollar*>(buffer));
+            }
+            break;
+        case 'h':
+            if constexpr (CanHandle<Handler, OperationalHalt>) {
+                handler.handle(*reinterpret_cast<const OperationalHalt*>(buffer));
+            }
+            break;
+        case 'A':
+            if constexpr (CanHandle<Handler, AddOrder>) {
+                handler.handle(*reinterpret_cast<const AddOrder*>(buffer));
+            }
+            break;
+        case 'F':
+            if constexpr (CanHandle<Handler, AddOrderMPIDAttribution>) {
+                handler.handle(*reinterpret_cast<const AddOrderMPIDAttribution*>(buffer));
+            }
+            break;
+        case 'E':
+            if constexpr (CanHandle<Handler, OrderExecuted>) {
+                handler.handle(*reinterpret_cast<const OrderExecuted*>(buffer));
+            }
+            break;
+        case 'C':
+            if constexpr (CanHandle<Handler, OrderExecutedWithPrice>) {
+                handler.handle(*reinterpret_cast<const OrderExecutedWithPrice*>(buffer));
+            }
+            break;
+        case 'X':
+            if constexpr (CanHandle<Handler, OrderCancel>) {
+                handler.handle(*reinterpret_cast<const OrderCancel*>(buffer));
+            }
+            break;
+        case 'D':
+            if constexpr (CanHandle<Handler, OrderDelete>) {
+                handler.handle(*reinterpret_cast<const OrderDelete*>(buffer));
+            }
+            break;
+        case 'U':
+            if constexpr (CanHandle<Handler, OrderReplace>) {
+                handler.handle(*reinterpret_cast<const OrderReplace*>(buffer));
+            }
+            break;
+        case 'P':
+            if constexpr (CanHandle<Handler, TradeNonCross>) {
+                handler.handle(*reinterpret_cast<const TradeNonCross*>(buffer));
+            }
+            break;
+        case 'Q':
+            if constexpr (CanHandle<Handler, CrossTrade>) {
+                handler.handle(*reinterpret_cast<const CrossTrade*>(buffer));
+            }
+            break;
+        case 'B':
+            if constexpr (CanHandle<Handler, BrokenTrade>) {
+                handler.handle(*reinterpret_cast<const BrokenTrade*>(buffer));
+            }
+            break;
+        case 'I':
+            if constexpr (CanHandle<Handler, NOII>) {
+                handler.handle(*reinterpret_cast<const NOII*>(buffer));
+            }
+            break;
+        case 'N':
+            if constexpr (CanHandle<Handler, RetailInterest>) {
+                handler.handle(*reinterpret_cast<const RetailInterest*>(buffer));
+            }
+            break;
+        default: return false;
+    }
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// O(1) Function Pointer Dispatch Table
+//
+// For absolute lowest latency, avoiding jump table bounds checks or
+// branch mispredictions. Creates a 256-entry array of function pointers.
+// ─────────────────────────────────────────────────────────────────────────────
+template<typename Handler>
+struct DispatchTable {
+    using FuncPtr = void(*)(Handler&, const char*);
+    FuncPtr table[256]{};
+
+    constexpr DispatchTable() {
+        if constexpr (CanHandle<Handler, SystemEvent>) {
+            table[static_cast<uint8_t>('S')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const SystemEvent*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, StockDirectory>) {
+            table[static_cast<uint8_t>('R')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const StockDirectory*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, StockTradingAction>) {
+            table[static_cast<uint8_t>('H')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const StockTradingAction*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, RegSHORestriction>) {
+            table[static_cast<uint8_t>('Y')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const RegSHORestriction*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, MarketParticipantPosition>) {
+            table[static_cast<uint8_t>('L')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const MarketParticipantPosition*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, MWCBDeclineLevel>) {
+            table[static_cast<uint8_t>('V')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const MWCBDeclineLevel*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, MWCBStatus>) {
+            table[static_cast<uint8_t>('W')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const MWCBStatus*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, IPOQuotingPeriodUpdate>) {
+            table[static_cast<uint8_t>('K')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const IPOQuotingPeriodUpdate*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, LULDAuctionCollar>) {
+            table[static_cast<uint8_t>('J')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const LULDAuctionCollar*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, OperationalHalt>) {
+            table[static_cast<uint8_t>('h')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const OperationalHalt*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, AddOrder>) {
+            table[static_cast<uint8_t>('A')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const AddOrder*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, AddOrderMPIDAttribution>) {
+            table[static_cast<uint8_t>('F')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const AddOrderMPIDAttribution*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, OrderExecuted>) {
+            table[static_cast<uint8_t>('E')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const OrderExecuted*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, OrderExecutedWithPrice>) {
+            table[static_cast<uint8_t>('C')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const OrderExecutedWithPrice*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, OrderCancel>) {
+            table[static_cast<uint8_t>('X')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const OrderCancel*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, OrderDelete>) {
+            table[static_cast<uint8_t>('D')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const OrderDelete*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, OrderReplace>) {
+            table[static_cast<uint8_t>('U')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const OrderReplace*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, TradeNonCross>) {
+            table[static_cast<uint8_t>('P')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const TradeNonCross*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, CrossTrade>) {
+            table[static_cast<uint8_t>('Q')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const CrossTrade*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, BrokenTrade>) {
+            table[static_cast<uint8_t>('B')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const BrokenTrade*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, NOII>) {
+            table[static_cast<uint8_t>('I')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const NOII*>(buf));
+            };
+        }
+        if constexpr (CanHandle<Handler, RetailInterest>) {
+            table[static_cast<uint8_t>('N')] = [](Handler& h, const char* buf) {
+                h.handle(*reinterpret_cast<const RetailInterest*>(buf));
+            };
+        }
+    }
+
+    // Call this for O(1) dispatch
+    inline bool dispatch(Handler& handler, char type, const char* buffer) const {
+        if (auto func = table[static_cast<uint8_t>(type)]) {
+            func(handler, buffer);
+            return true;
+        }
+        return false;
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MoldUDP64 / PCAP Stream Parser
+//
+// Loops through a contiguous buffer of length-prefixed ITCH messages.
+// In ITCH / MoldUDP64, each message is often prefixed by a 2-byte length.
+// Returns the number of bytes processed.
+// ─────────────────────────────────────────────────────────────────────────────
+template<typename Handler>
+inline std::size_t parse_stream(Handler& handler, const char* buffer, std::size_t length) {
+    std::size_t offset = 0;
+    while (offset + 2 <= length) {
+        // Read 2-byte message length (big-endian)
+        uint16_t msg_len = detail::read_be16(buffer + offset);
+        if (offset + 2 + msg_len > length) break; // Incomplete message
+
+        // The first byte of the message is the message type
+        char type = buffer[offset + 2];
+        dispatch_message(handler, type, buffer + offset + 2);
+        
+        offset += 2 + msg_len;
+    }
+    return offset;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enumeration of all defined message type characters
+// ─────────────────────────────────────────────────────────────────────────────
+inline constexpr char ALL_MESSAGE_TYPES[] = { 'S', 'R', 'H', 'Y', 'L', 'V', 'W', 'K', 'J', 'h', 'A', 'F', 'E', 'C', 'X', 'D', 'U', 'P', 'Q', 'B', 'I', 'N' };
+inline constexpr std::size_t NUM_MESSAGE_TYPES = 22;
+
+// Largest single message in the protocol (50B)
+inline constexpr std::size_t MAX_MESSAGE_SIZE = 50;
+
+} // namespace itch50

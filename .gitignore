@@ -17,7 +17,9 @@ out/
 compile_commands.json
 
 # Generated files (re-generate from schema)
-generated/generated_itch_parser.hpp
+# Note: generated_itch_parser.hpp is intentionally checked into git
+# so that the CI can verify it matches the schema without requiring python
+# in downstream consumer projects.
 
 # OS
 Thumbs.db
