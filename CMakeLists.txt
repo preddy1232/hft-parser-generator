@@ -154,6 +154,13 @@ if(BUILD_BENCHMARKS)
         benchmark::benchmark
         benchmark::benchmark_main
     )
+
+    add_executable(itch_lob_bench bench/lob_benchmark.cpp)
+    target_link_libraries(itch_lob_bench PRIVATE
+        itch_parser
+        benchmark::benchmark
+        benchmark::benchmark_main
+    )
 endif()
 
 # ──────────────────────────────────────────────────────────────────────

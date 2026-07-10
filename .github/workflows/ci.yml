@@ -177,16 +177,16 @@ jobs:
       # ── 11. Run benchmarks (Release only) ──────────────────────────────
       # Benchmarks are only meaningful on optimised builds.
       # Output is saved as JSON for artifact upload and cross-run comparison.
-      - name: Run benchmarks
+      - name: Run parser benchmarks
         if: matrix.build_type == 'Release'
         run: |
           ./${{ env.BUILD_DIR }}/itch_bench \
             --benchmark_format=json \
             --benchmark_out=${{ env.BUILD_DIR }}/benchmark_results.json \
             --benchmark_out_format=json
-          echo "✓ Benchmarks completed."
+          echo "✓ Parser benchmarks completed."
           echo ""
-          echo "--- Results Summary ---"
+          echo "--- Parser Results Summary ---"
           cat ${{ env.BUILD_DIR }}/benchmark_results.json | python3 -c "
           import json, sys
           data = json.load(sys.stdin)
@@ -197,12 +197,36 @@ jobs:
               print(f'  {name}: {time:.2f} {unit}')
           " || true
 
+      - name: Run LOB benchmarks
+        if: matrix.build_type == 'Release'
+        run: |
+          ./${{ env.BUILD_DIR }}/itch_lob_bench \
+            --benchmark_format=json \
+            --benchmark_out=${{ env.BUILD_DIR }}/lob_benchmark_results.json \
+            --benchmark_out_format=json
+          echo "✓ LOB benchmarks completed."
+          echo ""
+          echo "--- LOB Results Summary ---"
+          cat ${{ env.BUILD_DIR }}/lob_benchmark_results.json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for b in data.get('benchmarks', []):
+              name = b.get('name', '?')
+              time = b.get('real_time', 0)
+              unit = b.get('time_unit', 'ns')
+              iters = b.get('items_per_second', 0)
+              suffix = f' ({iters/1e6:.1f}M items/s)' if iters else ''
+              print(f'  {name}: {time:.2f} {unit}{suffix}')
+          " || true
+
       # ── 12. Upload benchmark results as artifacts ──────────────────────
       - name: Upload benchmark results
         if: matrix.build_type == 'Release'
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ matrix.compiler }}
-          path: ${{ env.BUILD_DIR }}/benchmark_results.json
+          path: |
+            ${{ env.BUILD_DIR }}/benchmark_results.json
+            ${{ env.BUILD_DIR }}/lob_benchmark_results.json
           retention-days: 30
           if-no-files-found: warn

@@ -140,6 +140,23 @@ The `CanHandle<Handler, Message>` C++20 concept detects which `handle()` overloa
 | `-march=native` | Enables `movbe`, `bmi2`, and other microarchitecture-specific instructions |
 | `-flto` | Link-time optimization across translation units |
 
+### Limit Order Book Throughput
+
+The LOB benchmark suite (`itch_lob_bench`) measures per-operation latency on a pre-warmed 100-level book:
+
+```bash
+./build/itch_lob_bench
+```
+
+| Benchmark | What it measures |
+|---|---|
+| `BM_LOB_AddOrder` | Insert into a 100-level book |
+| `BM_LOB_AddDeleteCycle` | Add + delete round-trip |
+| `BM_LOB_ExecuteOrder` | Add + full fill execution |
+| `BM_LOB_ReplaceOrder` | Order replacement (delete old + insert new) |
+| `BM_LOB_MixedWorkload` | Realistic 40/30/15/10/5 message mix |
+| `BM_LOB_EndToEnd` | Full pipeline: parse ITCH stream → dispatch → LOB update |
+
 ---
 
 ## 🏁 Quick Start
@@ -413,16 +430,25 @@ hft-parser-generator/
 │   └── generated_itch_parser.hpp   # Auto-generated parser (1023 lines, 22 structs)
 │
 ├── include/
-│   └── endian_utils.hpp            # Hand-written: bswap, read_be{16,32,48,64}, read_alpha
+│   ├── endian_utils.hpp            # bswap, read_be{16,32,48,64}, read_alpha
+│   ├── market.hpp                  # Limit Order Book (flat sorted vector, O(1) BBO)
+│   ├── moldudp64.hpp               # MoldUDP64 multicast protocol parser
+│   ├── udp_receiver.hpp            # Zero-copy UDP multicast receiver
+│   ├── itch_file_reader.hpp        # ITCH binary file / PCAP reader
+│   └── pcap_reader.hpp             # PCAP packet parser
 │
 ├── src/
-│   └── main.cpp                    # Integration driver with mock AddOrder message
+│   ├── main.cpp                    # Integration driver with mock AddOrder message
+│   ├── lob_main.cpp                # LOB reconstruction CLI (reads ITCH file → builds book)
+│   ├── itch_reader_main.cpp        # ITCH file / PCAP reader CLI
+│   └── live_main.cpp               # Live MoldUDP64 multicast ingestion
 │
 ├── test/
 │   └── parser_test.cpp             # GTest unit tests (struct sizes, endian, accessors)
 │
 ├── bench/
-│   └── benchmark.cpp               # Google Benchmark (throughput measurement)
+│   ├── benchmark.cpp               # Parser benchmark (dispatch, stream parsing)
+│   └── lob_benchmark.cpp           # LOB benchmark (add/delete/execute/replace/mixed/E2E)
 │
 └── godbolt/
     └── godbolt_snippet.cpp         # Self-contained Compiler Explorer snippet
@@ -558,6 +584,25 @@ This is **not** a real `memcpy` — the compiler recognizes this pattern and emi
 - Avoids undefined behavior from misaligned casts
 - Is endian-aware via `if constexpr (std::endian::native == std::endian::little)`
 - Produces identical codegen to raw pointer casts, but is standards-compliant
+
+### Why a Flat Sorted Array for the LOB?
+
+The Limit Order Book uses `FlatPriceLadder<bool SortDescending>` — a contiguous `std::vector<PriceLevel>` kept sorted by price — instead of the conventional `std::map` (red-black tree).
+
+| Property | `std::map` (RB-Tree) | `FlatPriceLadder` (Sorted Vector) |
+|---|---|---|
+| Memory layout | Scattered heap nodes | Contiguous array |
+| Cache behavior | Pointer chasing → cache misses | Sequential → prefetcher-friendly |
+| Node overhead | ~48 bytes (3 ptrs + color) | 0 bytes (just `PriceLevel`) |
+| Top-of-book | O(1) via `begin()` | O(1) via `[0]` |
+| Price lookup | O(log n) tree walk | O(log n) binary search |
+| Insert/remove | O(log n) | O(n) memmove |
+
+The O(n) insert/remove trade-off is worth it because:
+- Active price levels per stock are typically 50–200, so memmove moves ~1–3 KB
+- L1 cache is 32–64 KB; the entire ladder fits in L1
+- The `static_assert(is_trivially_copyable_v<PriceLevel>)` guarantees the compiler optimizes `vector::insert/erase` to raw `memmove`
+- Top-of-book access (the hottest path) is a single array dereference
 
 ### Why No Exceptions?
 

@@ -97,6 +97,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Reconstructing Limit Order Book from " << filename << "...\n";
 
     OrderBookHandler handler;
+    handler.market.reserve_orders(10'000'000);
 
     auto t0 = std::chrono::steady_clock::now();
     auto stats = reader.process_file(handler);
