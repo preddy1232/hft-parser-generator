@@ -96,6 +96,12 @@ target_include_directories(itch_parser INTERFACE
     ${CMAKE_SOURCE_DIR}/include
 )
 
+add_library(ouch_parser INTERFACE)
+target_include_directories(ouch_parser INTERFACE
+    ${CMAKE_SOURCE_DIR}/generated
+    ${CMAKE_SOURCE_DIR}/include
+)
+
 # ──────────────────────────────────────────────────────────────────────
 # Main executable (example / integration driver)
 # ──────────────────────────────────────────────────────────────────────
@@ -142,6 +148,17 @@ if(BUILD_TESTS)
     )
     include(GoogleTest)
     gtest_discover_tests(itch_tests)
+
+    add_executable(ouch_tests test/ouch_test.cpp)
+    target_compile_options(ouch_tests PRIVATE
+        -fexceptions -frtti -Wno-conversion -fno-lto
+    )
+    target_link_options(ouch_tests PRIVATE -fno-lto)
+    target_link_libraries(ouch_tests PRIVATE
+        ouch_parser
+        GTest::gtest_main
+    )
+    gtest_discover_tests(ouch_tests)
 endif()
 
 # ──────────────────────────────────────────────────────────────────────

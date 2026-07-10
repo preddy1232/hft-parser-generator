@@ -333,7 +333,7 @@ public:
 
         if (offset_ + 2 > len) return false;
 
-        uint16_t msg_len = detail::read_be16(buf + offset_);
+        uint16_t msg_len = parser_utils::detail::read_be16(buf + offset_);
         if (msg_len == 0 || offset_ + 2 + msg_len > len) return false;
 
         out.length = msg_len;
@@ -367,7 +367,7 @@ public:
         DispatchTable<Handler> table;
 
         while (offset_ + 2 <= len) {
-            uint16_t msg_len = detail::read_be16(buf + offset_);
+            uint16_t msg_len = parser_utils::detail::read_be16(buf + offset_);
             if (msg_len == 0 || offset_ + 2 + msg_len > len) break;
 
             char type = buf[offset_ + 2];

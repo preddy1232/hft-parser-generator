@@ -11,7 +11,7 @@
 #include <string_view>
 #include <bit>
 
-namespace itch50 {
+namespace parser_utils {
 namespace detail {
 
 // ─────────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ namespace detail {
     uint16_t v;
     std::memcpy(&v, p, sizeof(v));
     if constexpr (std::endian::native == std::endian::little) {
-        return bswap16(v);
+        return parser_utils::detail::bswap16(v);
     }
     return v;
 }
@@ -74,7 +74,7 @@ namespace detail {
     uint32_t v;
     std::memcpy(&v, p, sizeof(v));
     if constexpr (std::endian::native == std::endian::little) {
-        return bswap32(v);
+        return parser_utils::detail::bswap32(v);
     }
     return v;
 }
@@ -117,4 +117,4 @@ template<std::size_t N>
 }
 
 } // namespace detail
-} // namespace itch50
+} // namespace parser_utils

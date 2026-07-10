@@ -23,10 +23,10 @@ struct MoldUDP64Header {
         return {session, 10};
     }
     uint64_t seq_num() const noexcept {
-        return detail::read_be64(reinterpret_cast<const char*>(&sequence_number));
+        return parser_utils::detail::read_be64(reinterpret_cast<const char*>(&sequence_number));
     }
     uint16_t count() const noexcept {
-        return detail::read_be16(reinterpret_cast<const char*>(&message_count));
+        return parser_utils::detail::read_be16(reinterpret_cast<const char*>(&message_count));
     }
 };
 #pragma pack(pop)
@@ -53,7 +53,7 @@ inline std::size_t parse_packet(Handler& handler, const char* buffer, std::size_
         if (offset + 2 > length) break;
         
         // ITCH messages inside MoldUDP64 are prefixed with a 2-byte length
-        uint16_t msg_len = detail::read_be16(buffer + offset);
+        uint16_t msg_len = parser_utils::detail::read_be16(buffer + offset);
         if (offset + 2 + msg_len > length) break;
         
         char type = buffer[offset + 2];

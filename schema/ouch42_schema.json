@@ -1,0 +1,79 @@
+{
+  "protocol": "NASDAQ OUCH 4.2",
+  "version": "4.2",
+  "namespace": "ouch42",
+  "byte_order": "big_endian",
+  "description": "NASDAQ OUCH 4.2 Order Entry Protocol. Used to send orders to the exchange.",
+
+  "data_types": {
+    "alpha":     { "description": "Single ASCII character",                        "cpp_type": "char",     "size": 1, "endian_swap": false },
+    "alpha_4":   { "description": "Fixed 4-byte ASCII string (space-padded right)", "cpp_type": "char[4]",  "size": 4, "endian_swap": false },
+    "alpha_8":   { "description": "Fixed 8-byte ASCII string (space-padded right)", "cpp_type": "char[8]",  "size": 8, "endian_swap": false },
+    "alpha_14":  { "description": "Fixed 14-byte ASCII string",                     "cpp_type": "char[14]", "size": 14, "endian_swap": false },
+    "integer_2": { "description": "Unsigned 16-bit big-endian integer",             "cpp_type": "uint16_t", "size": 2, "endian_swap": true  },
+    "integer_4": { "description": "Unsigned 32-bit big-endian integer",             "cpp_type": "uint32_t", "size": 4, "endian_swap": true  },
+    "integer_8": { "description": "Unsigned 64-bit big-endian integer",             "cpp_type": "uint64_t", "size": 8, "endian_swap": true  },
+    "price_4":   { "description": "32-bit big-endian price (4 implied decimals)",   "cpp_type": "uint32_t", "size": 4, "endian_swap": true, "decimals": 4 }
+  },
+
+  "messages": [
+    {
+      "type": "O",
+      "name": "EnterOrder",
+      "size": 49,
+      "description": "Inbound message to enter a new order.",
+      "fields": [
+        { "name": "message_type",     "type": "alpha",     "offset": 0,  "length": 1, "value": "O" },
+        { "name": "order_token",      "type": "alpha_14",  "offset": 1,  "length": 14 },
+        { "name": "buy_sell",         "type": "alpha",     "offset": 15, "length": 1, "values": {"B": "Buy", "S": "Sell", "T": "Short", "E": "Short Exempt"} },
+        { "name": "shares",           "type": "integer_4", "offset": 16, "length": 4 },
+        { "name": "stock",            "type": "alpha_8",   "offset": 20, "length": 8 },
+        { "name": "price",            "type": "price_4",   "offset": 28, "length": 4 },
+        { "name": "time_in_force",    "type": "integer_4", "offset": 32, "length": 4, "notes": "Seconds, 0 = IOC, 99998 = Market Hours, 99999 = System Hours" },
+        { "name": "firm",             "type": "alpha_4",   "offset": 36, "length": 4 },
+        { "name": "display",          "type": "alpha",     "offset": 40, "length": 1, "values": {"A": "Attributable", "Y": "Anonymous", "N": "Non-Display", "I": "Imbalance Only"} },
+        { "name": "capacity",         "type": "alpha",     "offset": 41, "length": 1 },
+        { "name": "intermarket_sweep","type": "alpha",     "offset": 42, "length": 1 },
+        { "name": "min_quantity",     "type": "integer_4", "offset": 43, "length": 4 },
+        { "name": "cross_type",       "type": "alpha",     "offset": 47, "length": 1 },
+        { "name": "customer_type",    "type": "alpha",     "offset": 48, "length": 1 }
+      ]
+    },
+    {
+      "type": "X",
+      "name": "CancelOrder",
+      "size": 19,
+      "description": "Inbound message to cancel an existing order.",
+      "fields": [
+        { "name": "message_type",     "type": "alpha",     "offset": 0,  "length": 1, "value": "X" },
+        { "name": "order_token",      "type": "alpha_14",  "offset": 1,  "length": 14 },
+        { "name": "shares",           "type": "integer_4", "offset": 15, "length": 4 }
+      ]
+    },
+    {
+      "type": "A",
+      "name": "OrderAccepted",
+      "size": 66,
+      "description": "Outbound message acknowledging a new order.",
+      "fields": [
+        { "name": "message_type",     "type": "alpha",     "offset": 0,  "length": 1, "value": "A" },
+        { "name": "timestamp",        "type": "integer_8", "offset": 1,  "length": 8 },
+        { "name": "order_token",      "type": "alpha_14",  "offset": 9,  "length": 14 },
+        { "name": "buy_sell",         "type": "alpha",     "offset": 23, "length": 1 },
+        { "name": "shares",           "type": "integer_4", "offset": 24, "length": 4 },
+        { "name": "stock",            "type": "alpha_8",   "offset": 28, "length": 8 },
+        { "name": "price",            "type": "price_4",   "offset": 36, "length": 4 },
+        { "name": "time_in_force",    "type": "integer_4", "offset": 40, "length": 4 },
+        { "name": "firm",             "type": "alpha_4",   "offset": 44, "length": 4 },
+        { "name": "display",          "type": "alpha",     "offset": 48, "length": 1 },
+        { "name": "order_ref_num",    "type": "integer_8", "offset": 49, "length": 8 },
+        { "name": "capacity",         "type": "alpha",     "offset": 57, "length": 1 },
+        { "name": "intermarket_sweep","type": "alpha",     "offset": 58, "length": 1 },
+        { "name": "min_quantity",     "type": "integer_4", "offset": 59, "length": 4 },
+        { "name": "cross_type",       "type": "alpha",     "offset": 63, "length": 1 },
+        { "name": "order_state",      "type": "alpha",     "offset": 64, "length": 1 },
+        { "name": "bbo_weight",       "type": "alpha",     "offset": 65, "length": 1 }
+      ]
+    }
+  ]
+}

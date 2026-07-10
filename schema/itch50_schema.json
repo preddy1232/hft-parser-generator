@@ -1,5 +1,6 @@
 {
   "protocol": "NASDAQ TotalView-ITCH 5.0",
+  "namespace": "itch50",
   "version": "5.0",
   "byte_order": "big_endian",
   "description": "Binary protocol for disseminating full order-depth market data. All multi-byte integers are big-endian (network byte order). Timestamps are nanoseconds since midnight ET. Alpha fields are space-padded ASCII.",

@@ -11,7 +11,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "`nCompiling and Running Tests inside Docker..." -ForegroundColor Cyan
 # Mount current directory, run cmake, build, and execute the tests
-docker run --rm -v "${PWD}:/app" hft-parser-env /bin/bash -c "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j`$(nproc) && ./build/itch_tests && ./build/itch_bench && ./build/itch_lob_bench"
+docker run --rm -v "${PWD}:/app" hft-parser-env /bin/bash -c "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j`$(nproc) && ./build/itch_tests && ./build/ouch_tests && ./build/itch_bench && ./build/itch_lob_bench"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ All tests passed successfully!" -ForegroundColor Green

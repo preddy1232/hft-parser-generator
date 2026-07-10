@@ -90,14 +90,14 @@ static_assert(sizeof(PcapPacketHeader) == 16, "PCAP packet header must be 16 byt
 [[nodiscard]] inline uint16_t pcap_read16(const char* p, bool swap) noexcept {
     uint16_t v;
     std::memcpy(&v, p, sizeof(v));
-    return swap ? bswap16(v) : v;
+    return swap ? parser_utils::detail::bswap16(v) : v;
 }
 
 /// Read a uint32_t from memory, byte-swapping if `swap` is true.
 [[nodiscard]] inline uint32_t pcap_read32(const char* p, bool swap) noexcept {
     uint32_t v;
     std::memcpy(&v, p, sizeof(v));
-    return swap ? bswap32(v) : v;
+    return swap ? parser_utils::detail::bswap32(v) : v;
 }
 
 } // namespace detail
@@ -289,7 +289,7 @@ public:
             }
 
             // MoldUDP64 header: Session(10) + SequenceNumber(8) + MessageCount(2)
-            uint16_t msg_count = detail::read_be16(payload + 18);
+            uint16_t msg_count = parser_utils::detail::read_be16(payload + 18);
             const char* msg_ptr = payload + detail::MOLDUDP64_HEADER_SIZE;
             std::size_t remaining = payload_len - detail::MOLDUDP64_HEADER_SIZE;
 
@@ -299,7 +299,7 @@ public:
             for (uint16_t i = 0; i < msg_count; ++i) {
                 if (remaining < 2) break;
 
-                uint16_t msg_len = detail::read_be16(msg_ptr);
+                uint16_t msg_len = parser_utils::detail::read_be16(msg_ptr);
                 msg_ptr   += 2;
                 remaining -= 2;
 
@@ -346,13 +346,13 @@ private:
 
                 // Check EtherType, handle VLAN tags
                 std::size_t eth_offset = 12;  // EtherType field offset
-                uint16_t ethertype = detail::read_be16(pkt_data + eth_offset);
+                uint16_t ethertype = parser_utils::detail::read_be16(pkt_data + eth_offset);
 
                 // Strip 802.1Q VLAN tags (one or more)
                 while (ethertype == detail::ETHERTYPE_VLAN && eth_offset + 4 <= pkt_len) {
                     eth_offset += 4;
                     if (eth_offset + 2 > pkt_len) return false;
-                    ethertype = detail::read_be16(pkt_data + eth_offset);
+                    ethertype = parser_utils::detail::read_be16(pkt_data + eth_offset);
                 }
 
                 if (ethertype != detail::ETHERTYPE_IPV4) return false;
@@ -375,7 +375,7 @@ private:
                 constexpr std::size_t SLL_HEADER_SIZE = 16;
                 if (pkt_len < SLL_HEADER_SIZE) return false;
 
-                uint16_t proto = detail::read_be16(pkt_data + 14);
+                uint16_t proto = parser_utils::detail::read_be16(pkt_data + 14);
                 if (proto != detail::ETHERTYPE_IPV4) return false;
 
                 ip_start = pkt_data + SLL_HEADER_SIZE;

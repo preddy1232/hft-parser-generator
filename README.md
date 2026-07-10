@@ -25,6 +25,19 @@ Built with C++20 concepts, `constexpr` dispatch tables, and compiler-verified co
 
 ## ⚡ Key Features
 
+- [x] Phase 1: High-Performance ITCH 5.0 Parsing (Zero-Copy)
+- [x] Phase 2: Live UDP Multicast Ingestion Pipeline
+- [x] Phase 3: Limit Order Book (LOB) Deterministic Engine
+- [x] Phase 4: Extreme Optimization (Branchless, CPU Cache-Friendly)
+- [x] Phase 5: Multi-Protocol Generation (ITCH & OUCH via Python generic schema)
+
+### Running the System
+- Build with `cmake -B build` and `cmake --build build`.
+- To run tests locally using docker (which executes the cross-compilation validation):
+  `powershell -ExecutionPolicy Bypass -File .\test_in_docker.ps1`
+- The system includes a Python JSON-driven code generator (`generator.py`) that produces `C++20` zero-copy struct parsers dynamically for different protocols like ITCH and OUCH.
+- The `BM_ParseStaticDispatch` and `BM_LOB_MixedWorkload` benchmarks will output the engine performance in ops/sec.
+
 | Feature | Description |
 |---|---|
 | **Zero-Copy Parsing** | Structs overlay directly onto the network buffer via `reinterpret_cast` — no memcpy, no deserialization |
