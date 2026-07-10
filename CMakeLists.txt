@@ -16,8 +16,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 
-# Release-mode flags: -O3, -march=x86-64-v3, LTO
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=x86-64-v3 -DNDEBUG")
+# Release-mode flags: -O3, -march=native, LTO
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto")
 endif()
