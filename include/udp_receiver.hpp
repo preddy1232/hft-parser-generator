@@ -2,9 +2,9 @@
 
 #include <string>
 #include <vector>
-#include <stdexcept>
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -36,7 +36,8 @@ public:
 #ifdef _WIN32
         WSADATA wsaData;
         if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-            throw std::runtime_error("WSAStartup failed");
+            std::cerr << "Fatal: WSAStartup failed\n";
+            std::abort();
         }
 #endif
 
@@ -46,7 +47,8 @@ public:
 #else
         if (sock_ < 0) {
 #endif
-            throw std::runtime_error("Failed to create socket");
+            std::cerr << "Fatal: Failed to create socket\n";
+            std::abort();
         }
 
         // Allow multiple listeners (SO_REUSEADDR)
@@ -62,7 +64,8 @@ public:
         local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         if (bind(sock_, reinterpret_cast<sockaddr*>(&local_addr), sizeof(local_addr)) < 0) {
-            throw std::runtime_error("Failed to bind socket");
+            std::cerr << "Fatal: Failed to bind socket\n";
+            std::abort();
         }
 
         // Join multicast group
@@ -71,7 +74,8 @@ public:
         mreq.imr_interface.s_addr = inet_addr(interface_ip.c_str());
 
         if (setsockopt(sock_, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<const char*>(&mreq), sizeof(mreq)) < 0) {
-            throw std::runtime_error("Failed to join multicast group (IP_ADD_MEMBERSHIP)");
+            std::cerr << "Fatal: Failed to join multicast group (IP_ADD_MEMBERSHIP)\n";
+            std::abort();
         }
 
         // Increase receive buffer for HFT (e.g., 32MB) to prevent drops on bursts
@@ -98,7 +102,12 @@ public:
     // In a kernel-bypass architecture (io_uring, AF_XDP, EF_VI, Solarflare),
     // this would poll a ring buffer instead of entering the kernel.
     inline int receive(char* buffer, std::size_t max_length) noexcept {
+#ifdef _WIN32
         return recv(sock_, buffer, static_cast<int>(max_length), 0);
+#else
+        auto n = recv(sock_, buffer, max_length, 0);
+        return static_cast<int>(n);
+#endif
     }
 };
 
