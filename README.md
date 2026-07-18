@@ -38,6 +38,40 @@ Built with C++20 concepts, `constexpr` dispatch tables, and compiler-verified co
 - The system includes a Python JSON-driven code generator (`generator.py`) that produces `C++20` zero-copy struct parsers dynamically for different protocols like ITCH and OUCH.
 - The `BM_ParseStaticDispatch` and `BM_LOB_MixedWorkload` benchmarks will output the engine performance in ops/sec.
 
+### Verified build
+
+The complete Docker build was last verified with GCC 13 on Ubuntu 24.04. The
+test suite covers parser layouts and accessors, dispatch and framing, OUCH
+parsing, and limit-order-book state transitions.
+
+```powershell
+# Start Docker Desktop first, then run from the repository root.
+powershell -ExecutionPolicy Bypass -File .\test_in_docker.ps1
+```
+
+For a faster test-only loop after the image has been built:
+
+```powershell
+docker run --rm -v "${PWD}:/app" hft-parser-env /bin/bash -c `
+  "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j && ctest --test-dir build --output-on-failure"
+```
+
+Benchmark results are microbenchmarks from the local machine and compiler. They
+are not wire-to-application latency measurements and should always be reported
+with the CPU, compiler, build flags, and benchmark workload.
+
+The correctness suite also runs 20,000 deterministic randomized order events
+against an independent `std::map` reference model. A generated six-message ITCH
+fixture is then replayed through the memory-mapped file reader, parser,
+dispatcher, and order book to verify the complete pipeline. Regenerate a fixture
+manually with:
+
+```bash
+python3 generator/generate_synthetic_itch.py /tmp/synthetic_itch.bin
+./build/itch_reader /tmp/synthetic_itch.bin --stats
+./build/itch_lob /tmp/synthetic_itch.bin
+```
+
 | Feature | Description |
 |---|---|
 | **Zero-Copy Parsing** | Structs overlay directly onto the network buffer via `reinterpret_cast` — no memcpy, no deserialization |

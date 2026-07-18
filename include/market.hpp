@@ -220,7 +220,15 @@ public:
 
     void on_add_order(uint64_t id, uint16_t locate, Side side,
                       uint32_t shares, uint32_t price) {
-        orders_.emplace(id, Order{id, locate, side, shares, price});
+        if (shares == 0) {
+            return;
+        }
+        const auto [it, inserted] =
+            orders_.emplace(id, Order{id, locate, side, shares, price});
+        (void)it;
+        if (!inserted) {
+            return;
+        }
         books_[locate].add_order(price, shares, side);
     }
 
@@ -228,8 +236,10 @@ public:
         auto it = orders_.find(id);
         if (it != orders_.end()) {
             Order& o = it->second;
-            books_[o.stock_locate].remove_shares(o.price, executed_shares, o.side);
-            o.shares -= executed_shares;
+            const uint32_t removed =
+                executed_shares < o.shares ? executed_shares : o.shares;
+            books_[o.stock_locate].remove_shares(o.price, removed, o.side);
+            o.shares -= removed;
             if (o.shares == 0) {
                 books_[o.stock_locate].remove_order(o.price, 0, o.side);
                 orders_.erase(it);
@@ -241,8 +251,10 @@ public:
         auto it = orders_.find(id);
         if (it != orders_.end()) {
             Order& o = it->second;
-            books_[o.stock_locate].remove_shares(o.price, canceled_shares, o.side);
-            o.shares -= canceled_shares;
+            const uint32_t removed =
+                canceled_shares < o.shares ? canceled_shares : o.shares;
+            books_[o.stock_locate].remove_shares(o.price, removed, o.side);
+            o.shares -= removed;
             if (o.shares == 0) {
                 books_[o.stock_locate].remove_order(o.price, 0, o.side);
                 orders_.erase(it);
@@ -272,6 +284,18 @@ public:
 
     LimitOrderBook& get_book(uint16_t locate) {
         return books_[locate];
+    }
+
+    [[nodiscard]] const LimitOrderBook& get_book(uint16_t locate) const {
+        return books_[locate];
+    }
+
+    [[nodiscard]] std::size_t active_order_count() const noexcept {
+        return orders_.size();
+    }
+
+    [[nodiscard]] bool contains_order(uint64_t id) const noexcept {
+        return orders_.find(id) != orders_.end();
     }
 
 private:

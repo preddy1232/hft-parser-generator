@@ -33,6 +33,16 @@ endif()
 option(BUILD_TESTS       "Build unit tests (requires GTest)"           ON)
 option(BUILD_BENCHMARKS  "Build benchmarks (requires Google Benchmark)" ON)
 option(BUILD_GODBOLT     "Build Godbolt-ready snippet for asm analysis" ON)
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+
+if(ENABLE_SANITIZERS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=address,undefined)
+    else()
+        message(FATAL_ERROR "ENABLE_SANITIZERS currently requires GCC or Clang")
+    endif()
+endif()
 
 # ──────────────────────────────────────────────────────────────────────
 # FetchContent: Google Test + Google Benchmark
@@ -149,6 +159,17 @@ if(BUILD_TESTS)
     include(GoogleTest)
     gtest_discover_tests(itch_tests)
 
+    add_executable(market_tests test/market_test.cpp)
+    target_compile_options(market_tests PRIVATE
+        -fexceptions -frtti -Wno-conversion -fno-lto
+    )
+    target_link_options(market_tests PRIVATE -fno-lto)
+    target_link_libraries(market_tests PRIVATE
+        itch_parser
+        GTest::gtest_main
+    )
+    gtest_discover_tests(market_tests)
+
     add_executable(ouch_tests test/ouch_test.cpp)
     target_compile_options(ouch_tests PRIVATE
         -fexceptions -frtti -Wno-conversion -fno-lto
@@ -202,6 +223,37 @@ if(Python3_FOUND)
         COMMENT "Generating ITCH 5.0 parser from schema..."
         VERBATIM
     )
+
+    if(BUILD_TESTS)
+        set(SYNTHETIC_ITCH_FIXTURE
+            ${CMAKE_BINARY_DIR}/fixtures/synthetic_itch.bin)
+        add_custom_command(
+            OUTPUT ${SYNTHETIC_ITCH_FIXTURE}
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/generator/generate_synthetic_itch.py
+                ${SYNTHETIC_ITCH_FIXTURE}
+            DEPENDS
+                ${CMAKE_SOURCE_DIR}/generator/generate_synthetic_itch.py
+            COMMENT "Generating deterministic synthetic ITCH fixture..."
+            VERBATIM
+        )
+        add_custom_target(generate_synthetic_fixture
+            DEPENDS ${SYNTHETIC_ITCH_FIXTURE})
+
+        add_executable(replay_tests test/replay_test.cpp)
+        add_dependencies(replay_tests generate_synthetic_fixture)
+        target_compile_options(replay_tests PRIVATE
+            -fexceptions -frtti -Wno-conversion -fno-lto
+        )
+        target_link_options(replay_tests PRIVATE -fno-lto)
+        target_compile_definitions(replay_tests PRIVATE
+            SYNTHETIC_ITCH_FIXTURE="${SYNTHETIC_ITCH_FIXTURE}")
+        target_link_libraries(replay_tests PRIVATE
+            itch_parser
+            GTest::gtest_main
+        )
+        gtest_discover_tests(replay_tests)
+    endif()
 else()
     message(STATUS "Python3 not found — 'generate' custom target will not be available.")
 endif()
