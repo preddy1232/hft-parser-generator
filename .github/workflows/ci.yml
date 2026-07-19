@@ -130,22 +130,9 @@ jobs:
           echo "✓ Generated header matches committed version."
 
       # ── 6. Cache CMake build & FetchContent downloads ──────────────────
-      # Keyed on compiler + build type + CMakeLists hash to bust on config changes.
-      - name: Cache CMake build directory
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.BUILD_DIR }}
-          key: cmake-${{ matrix.compiler }}-${{ matrix.build_type }}-${{ hashFiles('CMakeLists.txt') }}
-          restore-keys: |
-            cmake-${{ matrix.compiler }}-${{ matrix.build_type }}-
-
-      - name: Cache FetchContent downloads
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/CPM  # Common FetchContent cache location
-          key: fetchcontent-${{ hashFiles('CMakeLists.txt') }}
-          restore-keys: |
-            fetchcontent-
+      # Compiled build trees are intentionally not cached. GitHub runners can
+      # expose different CPU features, so restored machine-specific objects may
+      # terminate with SIGILL on a later runner.
 
       # ── 7. CMake configure ─────────────────────────────────────────────
       - name: CMake configure
@@ -158,6 +145,7 @@ jobs:
             -DBUILD_TESTS=ON \
             -DBUILD_BENCHMARKS=ON \
             -DBUILD_GODBOLT=ON \
+            -DENABLE_NATIVE_ARCH=OFF \
             -DENABLE_SANITIZERS=${{ matrix.sanitizers && 'ON' || 'OFF' }} \
             -DFETCHCONTENT_QUIET=OFF
 

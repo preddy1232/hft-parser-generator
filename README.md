@@ -93,7 +93,7 @@ python3 generator/generate_synthetic_itch.py /tmp/synthetic_itch.bin
 | **Assembly Inspection** | Godbolt-ready snippet makes generated loads and byte swaps easy to inspect |
 | **`constexpr` Everything** | Message size lookup, name lookup, and dispatch tables are all `constexpr` |
 | **Header-Only** | Single generated header + one utility header — drop into any project |
-| **Optimized Build** | Release configuration uses `-fno-exceptions -fno-rtti -O3 -march=native -flto` |
+| **Optimized Build** | Release uses `-fno-exceptions -fno-rtti -O3 -flto`; local benchmarks can opt into `-march=native` |
 
 ---
 

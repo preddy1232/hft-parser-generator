@@ -16,12 +16,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 
-# Release-mode flags: -O3, -march=native, LTO
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto")
-endif()
-
 # Default to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
@@ -34,6 +28,18 @@ option(BUILD_TESTS       "Build unit tests (requires GTest)"           ON)
 option(BUILD_BENCHMARKS  "Build benchmarks (requires Google Benchmark)" ON)
 option(BUILD_GODBOLT     "Build Godbolt-ready snippet for asm analysis" ON)
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+option(ENABLE_NATIVE_ARCH "Optimize for the build machine CPU (non-portable binaries)" OFF)
+
+# Release builds are portable by default so binaries can move between machines.
+# Local benchmark builds may opt into CPU-specific instructions explicitly.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto")
+    if(ENABLE_NATIVE_ARCH)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
+    endif()
+elseif(MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /DNDEBUG")
+endif()
 
 if(ENABLE_SANITIZERS)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
