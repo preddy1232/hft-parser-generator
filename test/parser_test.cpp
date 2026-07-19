@@ -1364,3 +1364,16 @@ TEST(StreamTests, ParseStream_OnlyLengthPrefix_NoMessageBody) {
     std::size_t processed = parse_stream(handler, reinterpret_cast<char*>(stream), 2);
     EXPECT_EQ(processed, 0u);
 }
+
+TEST(StreamTests, ParseStream_ZeroLengthRecordStopsSafely) {
+    FullHandler handler;
+    const uint8_t stream[2] = {0, 0};
+
+    const std::size_t processed = parse_stream(
+        handler, reinterpret_cast<const char*>(stream), sizeof(stream));
+
+    EXPECT_EQ(processed, 0u);
+    for (char type : ALL_MESSAGE_TYPES) {
+        EXPECT_EQ(handler.counts[static_cast<uint8_t>(type)], 0);
+    }
+}

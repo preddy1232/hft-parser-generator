@@ -78,7 +78,8 @@ int main() {
     OrderBookHandler handler;
     
     std::puts("\n--- Using parse_stream ---");
-    parse_stream(handler, reinterpret_cast<const char*>(buffer), sizeof(buffer));
+    constexpr std::size_t framed_message_size = 2 + sizeof(AddOrder);
+    parse_stream(handler, reinterpret_cast<const char*>(buffer), framed_message_size);
 
     std::puts("\n--- Using O(1) DispatchTable directly ---");
     DispatchTable<OrderBookHandler> table;

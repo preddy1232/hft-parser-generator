@@ -1,8 +1,20 @@
-# HFT ITCH 5.0 Parser Generator
+# Low-Latency Market Data Engine & Limit Order Book
 
-**Zero-copy, zero-allocation, schema-driven NASDAQ ITCH 5.0 parser generator for high-frequency trading systems.**
+A C++20 market-data pipeline that generates endian-aware NASDAQ ITCH 5.0 and
+OUCH 4.2 parsers from JSON schemas, ingests length-prefixed or MoldUDP64/PCAP
+traffic, and reconstructs an order-level limit order book.
 
-Built with C++20 concepts, `constexpr` dispatch tables, and compiler-verified codegen — designed for nanosecond-scale market data parsing on the hot path.
+The project focuses on measurable performance and reproducible correctness:
+
+- 22 ITCH 5.0 and 3 OUCH 4.2 message layouts generated from JSON
+- Memory-mapped file replay, PCAP parsing, and UDP multicast ingestion
+- Cache-conscious contiguous price ladders with constant-time order lookup
+- More than 20 million messages/second in the local synthetic end-to-end benchmark
+- 72 tests under GCC and Clang, including AddressSanitizer and UndefinedBehaviorSanitizer
+- 20,000-event differential test against an independent `std::map` reference model
+
+> Performance figures are local synthetic benchmark results, not production
+> wire-to-application latency. See [Performance](#-performance) for scope.
 
 ---
 
@@ -28,7 +40,7 @@ Built with C++20 concepts, `constexpr` dispatch tables, and compiler-verified co
 - [x] Phase 1: High-Performance ITCH 5.0 Parsing (Zero-Copy)
 - [x] Phase 2: Live UDP Multicast Ingestion Pipeline
 - [x] Phase 3: Limit Order Book (LOB) Deterministic Engine
-- [x] Phase 4: Extreme Optimization (Branchless, CPU Cache-Friendly)
+- [x] Phase 4: Cache-conscious limit order book and benchmark suite
 - [x] Phase 5: Multi-Protocol Generation (ITCH & OUCH via Python generic schema)
 
 ### Running the System
@@ -78,10 +90,10 @@ python3 generator/generate_synthetic_itch.py /tmp/synthetic_itch.bin
 | **Zero-Allocation** | No heap allocations on the hot path. Alpha fields return `std::string_view` into the source buffer |
 | **Schema-Driven** | All 22 message types generated from a single JSON schema — change the schema, regenerate the parser |
 | **C++20 Concepts** | `CanHandle<Handler, Message>` concept enables compile-time handler dispatch — unhandled messages are eliminated at compile time |
-| **Assembly-Verified** | Godbolt-ready snippet proves the parser compiles to `movbe` instructions with zero branches |
+| **Assembly Inspection** | Godbolt-ready snippet makes generated loads and byte swaps easy to inspect |
 | **`constexpr` Everything** | Message size lookup, name lookup, and dispatch tables are all `constexpr` |
 | **Header-Only** | Single generated header + one utility header — drop into any project |
-| **HFT-Grade Flags** | `-fno-exceptions -fno-rtti -O3 -march=native -flto` by default |
+| **Optimized Build** | Release configuration uses `-fno-exceptions -fno-rtti -O3 -march=native -flto` |
 
 ---
 
@@ -163,11 +175,14 @@ On x86-64 with `-march=native`, the compiler fuses `memcpy` + `bswap` into a sin
 movbe  rax, QWORD PTR [rdi+11]    ; load + byte-swap in one instruction
 ```
 
-No intermediate copies. No function calls. One cycle.
+This avoids intermediate field copies in the inspected hot path. Exact latency
+depends on the compiler, CPU microarchitecture, surrounding code, and data.
 
 #### O(1) Dispatch Table
 
-The `DispatchTable<Handler>` creates a 256-entry function pointer array at compile time. Message dispatch is a single indexed load — no switch, no bounds check, no branch:
+The `DispatchTable<Handler>` creates a 256-entry function pointer array at
+compile time. Dispatch uses the message byte as an index followed by an indirect
+function call:
 
 ```cpp
 table[static_cast<uint8_t>(type)](handler, buffer);  // one indirect call
@@ -218,7 +233,7 @@ The LOB benchmark suite (`itch_lob_bench`) measures per-operation latency on a p
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/hft-parser-generator.git
+git clone https://github.com/preddy1232/hft-parser-generator.git
 cd hft-parser-generator
 
 # Configure and build (Release mode is default)
@@ -332,7 +347,7 @@ Uses a `switch` statement with `if constexpr (CanHandle<...>)` checks — unhand
 
 ### 5. O(1) Dispatch Table (`DispatchTable`)
 
-For absolute lowest latency — one indirect function call, no branching:
+For table-based dispatch using one indexed lookup and an indirect call:
 
 ```cpp
 OrderBookHandler handler;
@@ -648,7 +663,7 @@ The Limit Order Book uses `FlatPriceLadder<bool SortDescending>` — a contiguou
 The O(n) insert/remove trade-off is worth it because:
 - Active price levels per stock are typically 50–200, so memmove moves ~1–3 KB
 - L1 cache is 32–64 KB; the entire ladder fits in L1
-- The `static_assert(is_trivially_copyable_v<PriceLevel>)` guarantees the compiler optimizes `vector::insert/erase` to raw `memmove`
+- The `static_assert(is_trivially_copyable_v<PriceLevel>)` makes the level type eligible for efficient bulk movement; generated code should be inspected on the target compiler
 - Top-of-book access (the hottest path) is a single array dereference
 
 ### Why No Exceptions?
@@ -672,7 +687,7 @@ RTTI (`-frtti`) adds a `type_info` vtable pointer to every class with virtual fu
 |---|---|---|---|
 | Direct Cast | `reinterpret_cast<const T*>(buf)` | Lowest | Caller must know the type |
 | `dispatch_message()` | `switch` + `if constexpr` | Low | Automatic dead code elimination |
-| `DispatchTable<H>` | 256-entry function pointer array | Lowest (for unknown types) | O(1) indexed lookup, no branch prediction |
+| `DispatchTable<H>` | 256-entry function pointer array | Low dispatch overhead | Indexed lookup and indirect call |
 
 Different parts of an HFT system have different needs. The order book hot path may use direct casts for known message types, while the feed handler loop uses `DispatchTable` for type-agnostic dispatch.
 

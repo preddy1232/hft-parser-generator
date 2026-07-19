@@ -262,10 +262,11 @@ struct DispatchTable {
 template<typename Handler>
 inline std::size_t parse_stream(Handler& handler, const char* buffer, std::size_t length) {
     std::size_t offset = 0;
-    while (offset + 2 <= length) {
+    while (length - offset >= 2) {
         // Read 2-byte message length (big-endian)
         uint16_t msg_len = parser_utils::detail::read_be16(buffer + offset);
-        if (offset + 2 + msg_len > length) break; // Incomplete message
+        if (msg_len == 0) break; // A message must contain a type byte
+        if (msg_len > length - offset - 2) break; // Incomplete message
 
         // The first byte of the message is the message type
         char type = buffer[offset + 2];
